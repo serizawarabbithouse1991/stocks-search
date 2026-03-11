@@ -91,6 +91,56 @@ export async function filterByTag(field: string, value: string): Promise<FilterR
   return res.json();
 }
 
+// --- LLM ---
+export interface LLMProvider {
+  id: string;
+  name: string;
+  configured: boolean;
+}
+
+export async function fetchLLMProviders(): Promise<{ providers: LLMProvider[]; default: string }> {
+  const res = await fetch(`${API_BASE}/api/llm/providers`);
+  if (!res.ok) return { providers: [], default: "ollama" };
+  return res.json();
+}
+
+export interface ThemeSuggestion {
+  code: string;
+  name: string;
+  reason: string;
+  in_master: boolean;
+}
+
+export async function llmThemeSuggest(
+  theme: string, provider?: string, apiKey?: string, model?: string,
+): Promise<{ theme: string; count: number; suggestions: ThemeSuggestion[] }> {
+  const res = await fetch(`${API_BASE}/api/llm/theme`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme, provider, api_key: apiKey, model }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "LLM theme failed");
+  }
+  return res.json();
+}
+
+export async function llmAnalyze(
+  tickers: string[], theme?: string, provider?: string, apiKey?: string, model?: string,
+): Promise<{ report: string; ticker_count: number }> {
+  const res = await fetch(`${API_BASE}/api/llm/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tickers, theme, provider, api_key: apiKey, model }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "LLM analysis failed");
+  }
+  return res.json();
+}
+
 export async function exportCsv(tickers: string[], start: string, end: string) {
   const res = await fetch(`${API_BASE}/api/export/csv`, {
     method: "POST",

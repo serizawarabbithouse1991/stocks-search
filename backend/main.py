@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import master
+import llm_service
 from stock_service import (
     get_stock_data_yfinance,
     get_stock_data_batch,
@@ -254,6 +255,86 @@ def master_reload(path: Optional[str] = None):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- LLM ---
+class ThemeRequest(BaseModel):
+    theme: str
+    provider: Optional[str] = None
+    api_key: Optional[str] = None
+    model: Optional[str] = None
+
+
+class AnalysisRequest(BaseModel):
+    tickers: list[str]
+    theme: Optional[str] = None
+    provider: Optional[str] = None
+    api_key: Optional[str] = None
+    model: Optional[str] = None
+
+
+@app.post("/api/llm/theme")
+async def llm_theme(req: ThemeRequest):
+    """テーマからLLMが関連銘柄を提案"""
+    try:
+        tags = master.list_tags()
+        sectors = tags.get("sector33", [])
+        suggestions = await llm_service.suggest_theme_tickers(
+            req.theme, sectors, req.provider, req.api_key, req.model,
+        )
+        results = []
+        for s in suggestions:
+            code = s["code"]
+            entry = master.get_entry(code) or master.get_entry(f"{code}.T")
+            results.append({
+                "code": f"{code}.T" if not code.endswith(".T") else code,
+                "name": entry["name"] if entry else code,
+                "reason": s.get("reason", ""),
+                "in_master": entry is not None,
+            })
+        return {"theme": req.theme, "count": len(results), "suggestions": results}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/llm/analyze")
+async def llm_analyze(req: AnalysisRequest):
+    """選択中の銘柄群をLLMが比較分析"""
+    try:
+        tickers_info = []
+        for ticker in req.tickers:
+            entry = master.get_entry(ticker)
+            info: dict = {"ticker": ticker}
+            if entry:
+                info["name"] = entry["name"]
+                info["sector"] = entry.get("sector33", "")
+            tickers_info.append(info)
+
+        report = await llm_service.analyze_stocks(
+            tickers_info, req.theme, req.provider, req.api_key, req.model,
+        )
+        return {"report": report, "ticker_count": len(req.tickers)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/llm/providers")
+def llm_providers():
+    """利用可能なLLMプロバイダー一覧"""
+    import os
+    return {
+        "providers": [
+            {"id": "openai", "name": "OpenAI (GPT-4o)", "configured": bool(os.getenv("OPENAI_API_KEY"))},
+            {"id": "anthropic", "name": "Anthropic (Claude)", "configured": bool(os.getenv("ANTHROPIC_API_KEY"))},
+            {"id": "gemini", "name": "Google Gemini", "configured": bool(os.getenv("GEMINI_API_KEY"))},
+            {"id": "ollama", "name": "Ollama (ローカル)", "configured": True},
+        ],
+        "default": os.getenv("LLM_PROVIDER", "ollama"),
+    }
 
 
 if __name__ == "__main__":
