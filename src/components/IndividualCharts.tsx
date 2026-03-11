@@ -15,6 +15,7 @@ import {
 import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
 import { useChartColors } from "../ThemeContext";
+import { useLocale } from "../i18n";
 
 interface Props {
   stocks: StockData[];
@@ -53,6 +54,7 @@ function SingleStockChart({
   name: string;
 }) {
   const cc = useChartColors();
+  const { t } = useLocale();
   const [flags, setFlags] = useState<IndicatorFlags>({ ...DEFAULT_FLAGS });
 
   const toggle = (key: keyof IndicatorFlags) =>
@@ -105,7 +107,7 @@ function SingleStockChart({
         <div className="chart-toolbar" style={{ padding: 0, borderBottom: "none", marginBottom: 0 }}>
           {(
             [
-              ["volume", "出来高"],
+              ["volume", t("chart.volume")],
               ["vwap", "VWAP"],
               ["sma20", "SMA(20)"],
               ["sma50", "SMA(50)"],
@@ -144,8 +146,8 @@ function SingleStockChart({
             labelStyle={{ color: cc.text }}
             formatter={(value: number, n: string) => {
               const nameMap: Record<string, string> = {
-                close: "終値",
-                volume: "出来高",
+                close: t("chart.close"),
+                volume: t("chart.volume"),
                 vwap: "VWAP",
                 sma20: "SMA(20)",
                 sma50: "SMA(50)",

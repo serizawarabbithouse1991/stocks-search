@@ -1,4 +1,4 @@
-"""FastAPI バックエンド - 株式銘柄比較ツール"""
+"""FastAPI バックエンド - StocksView API"""
 
 import csv
 import io
@@ -16,8 +16,19 @@ from stock_service import (
     get_latest_price_yfinance,
     normalize_for_comparison,
 )
+from database import init_db
+from routers.auth_router import router as auth_router
+from routers.sync_router import router as sync_router
 
-app = FastAPI(title="StocksView API", version="1.0.0")
+app = FastAPI(title="StocksView API", version="1.1.0")
+
+app.include_router(auth_router)
+app.include_router(sync_router)
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 app.add_middleware(
     CORSMiddleware,

@@ -19,6 +19,9 @@ venv/
 *.egg-info/
 .eggs/
 
+# SQLite DB
+backend/data/*.db
+
 # IDE / OS
 .idea/
 .vscode/

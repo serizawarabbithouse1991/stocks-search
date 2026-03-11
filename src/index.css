@@ -115,10 +115,44 @@ body {
   transition: background 0.3s ease;
 }
 
-.header-left {
+.header-center {
   display: flex;
   align-items: baseline;
   gap: 12px;
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.header-user {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  padding: 4px 12px;
+  background: var(--accent-bg);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.header-login-btn {
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.header-login-btn:hover {
+  opacity: 0.85;
 }
 
 .app-header h1 {
@@ -1475,4 +1509,104 @@ td:first-child, th:first-child {
   color: var(--text-muted);
   font-size: 0.82rem;
   font-style: italic;
+}
+
+/* ===== Auth Modal ===== */
+.auth-modal {
+  max-width: 400px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.auth-field input {
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.auth-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.auth-form button[type="submit"] {
+  padding: 10px 16px;
+  background: var(--btn-primary-bg);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+
+.auth-form button[type="submit"]:hover {
+  background: var(--btn-primary-hover);
+}
+
+.auth-form button[type="submit"]:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-color);
+  cursor: not-allowed;
+}
+
+.auth-error {
+  color: var(--negative);
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background: var(--error-bg);
+  border-radius: 6px;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Settings: login prompt & synced badge */
+.settings-login-prompt {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.settings-synced-badge {
+  color: var(--positive) !important;
+  font-size: 0.82rem;
 }

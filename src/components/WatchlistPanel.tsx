@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../auth/AuthContext";
+import { getWatchlists, putWatchlists, type SyncWatchlist } from "../auth/api";
 
 interface Ticker {
   code: string;
@@ -88,6 +90,7 @@ function exportAsTxt(tickers: Ticker[], listName?: string) {
 }
 
 export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
+  const { token } = useAuth();
   const [watchlists, setWatchlists] = useState<Watchlist[]>(loadWatchlists);
   const [isOpen, setIsOpen] = useState(true);
   const [saveName, setSaveName] = useState("");
@@ -96,10 +99,44 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
   const [editName, setEditName] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    getWatchlists(token)
+      .then((res) => {
+        if (res.watchlists?.length) {
+          const merged = mergeWatchlists(loadWatchlists(), res.watchlists);
+          setWatchlists(merged);
+          persistWatchlists(merged);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
+  function mergeWatchlists(local: Watchlist[], remote: SyncWatchlist[]): Watchlist[] {
+    const ids = new Set(local.map((w) => w.id));
+    const result = [...local];
+    for (const r of remote) {
+      if (!ids.has(r.id)) {
+        result.push({ id: r.id, name: r.name, tickers: r.tickers, createdAt: r.createdAt });
+      }
+    }
+    return result;
+  }
+
+  const syncToServer = (lists: Watchlist[]) => {
+    if (!token) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      putWatchlists(token, lists).catch(() => {});
+    }, 1500);
+  };
 
   const update = (lists: Watchlist[]) => {
     setWatchlists(lists);
     persistWatchlists(lists);
+    syncToServer(lists);
   };
 
   const handleSave = () => {

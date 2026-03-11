@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { StocksResponse, SearchResult } from "./types";
 import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, type LatestPrice } from "./api";
+import { useLocale } from "./i18n";
+import { useAuth } from "./auth/AuthContext";
+import { putSettings, getSettings } from "./auth/api";
 
 import StockChart from "./components/StockChart";
 import StockTable from "./components/StockTable";
@@ -9,12 +12,15 @@ import IndividualCharts from "./components/IndividualCharts";
 import WatchlistPanel from "./components/WatchlistPanel";
 import LegalModal, { PrivacyPolicy, TermsOfService } from "./components/LegalModal";
 import SettingsPanel from "./components/SettingsPanel";
+import AuthModal from "./components/AuthModal";
 
 const SUGGEST_DEBOUNCE_MS = 300;
 
 type Tab = "chart" | "individual" | "table";
 
 function App() {
+  const { t } = useLocale();
+  const { user, token } = useAuth();
   const [query, setQuery] = useState("");
   const [selectedTickers, setSelectedTickers] = useState<{ code: string; name: string }[]>([]);
   const [startDate, setStartDate] = useState("2025-01-01");
@@ -36,6 +42,8 @@ function App() {
   const searchAbortRef = useRef<AbortController | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -169,7 +177,7 @@ function App() {
       if (res.errors?.length) setErrors(res.errors);
     } catch (err: any) {
       if (err.name === "AbortError") {
-        setErrors(["データ取得を中止しました"]);
+        setErrors([t("action.fetchCancelled")]);
         return;
       }
       setErrors([err.message]);
@@ -193,6 +201,32 @@ function App() {
     await exportCsv(codes, startDate, endDate);
   };
 
+  // Sync: load settings from server on login
+  useEffect(() => {
+    if (!token) return;
+    getSettings(token)
+      .then((s) => {
+        if (s.selected_tickers?.length) {
+          setSelectedTickers(s.selected_tickers);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
+  // Sync: save selected tickers to server on change (debounced)
+  useEffect(() => {
+    if (!token) return;
+    if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+    syncDebounceRef.current = setTimeout(() => {
+      const theme = document.documentElement.getAttribute("data-theme") || "dark";
+      const locale = localStorage.getItem("app-locale") || "ja";
+      putSettings(token, { theme, locale, selected_tickers: selectedTickers }).catch(() => {});
+    }, 2000);
+    return () => {
+      if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+    };
+  }, [selectedTickers, token]);
+
   const tickerNames: Record<string, string> = {};
   selectedTickers.forEach((t) => {
     tickerNames[t.code] = t.name;
@@ -201,41 +235,51 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <div className="header-left">
-          <h1>StocksView</h1>
-          <span className="header-subtitle">株式銘柄比較・分析</span>
-        </div>
         <button
           className="hamburger-btn"
           onClick={() => setSettingsOpen(true)}
-          title="設定メニュー"
-          aria-label="設定メニューを開く"
+          title={t("header.settingsMenu")}
+          aria-label={t("header.settingsMenu")}
         >
           <span className="hamburger-line" />
           <span className="hamburger-line" />
           <span className="hamburger-line" />
         </button>
+        <div className="header-center">
+          <h1>StocksView</h1>
+          <span className="header-subtitle">{t("header.subtitle")}</span>
+        </div>
+        <div className="header-right">
+          {user ? (
+            <span className="header-user">{user.username}</span>
+          ) : (
+            <button className="header-login-btn" onClick={() => setAuthModalOpen(true)}>
+              {t("auth.login")}
+            </button>
+          )}
+        </div>
       </header>
 
       <SettingsPanel
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onOpenLegal={(type) => setLegalModal(type)}
+        onOpenAuth={() => setAuthModalOpen(true)}
       />
 
       {/* 検索パネル */}
       <div className="panel">
-        <h2>銘柄検索</h2>
+        <h2>{t("search.title")}</h2>
         <div className="search-bar">
           <input
             type="text"
-            placeholder="銘柄コード（例: 7203.T, AAPL）を入力..."
+            placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
           <button onClick={handleSearch} disabled={searching}>
-            {searching ? "検索中..." : "検索"}
+            {searching ? t("search.searching") : t("search.button")}
           </button>
         </div>
 
@@ -259,7 +303,7 @@ function App() {
         )}
         {showResults && searchResults.length === 0 && !searching && query.trim() && (
           <div className="search-results search-results-empty">
-            該当する銘柄が見つかりません（あいまい検索で typo も許容しています）
+            {t("search.noResults")}
           </div>
         )}
 
@@ -277,15 +321,14 @@ function App() {
               style={{ padding: "4px 12px", fontSize: "0.82rem" }}
               onClick={() => { setSelectedTickers([]); setStocksData(null); }}
             >
-              全て削除
+              {t("search.deleteAll")}
             </button>
           </div>
         )}
 
-        {/* 直近価格（リアルタイム表示・約1分ごと更新） */}
         {latestPrices.length > 0 && (
           <div className="latest-prices">
-            <h3>直近価格</h3>
+            <h3>{t("latest.title")}</h3>
             <div className="latest-prices-grid">
               {latestPrices.map((p) => (
                 <div key={p.ticker} className="latest-price-card">
@@ -300,31 +343,30 @@ function App() {
               ))}
             </div>
             <p className="latest-prices-note">
-              Yahoo Finance（数分遅延） · 60秒ごと自動更新
+              {t("latest.note")}
             </p>
           </div>
         )}
 
-        {/* 期間設定 & 実行 */}
         <div className="search-bar">
           <select
             value={timeInterval}
             onChange={(e) => setTimeInterval(e.target.value)}
-            title="時間足"
+            title={t("interval.minutes")}
           >
-            <optgroup label="分足">
-              <option value="1m">1分</option>
-              <option value="5m">5分</option>
-              <option value="15m">15分</option>
-              <option value="30m">30分</option>
+            <optgroup label={t("interval.minutes")}>
+              <option value="1m">{t("interval.1m")}</option>
+              <option value="5m">{t("interval.5m")}</option>
+              <option value="15m">{t("interval.15m")}</option>
+              <option value="30m">{t("interval.30m")}</option>
             </optgroup>
-            <optgroup label="時間足">
-              <option value="60m">1時間</option>
+            <optgroup label={t("interval.hours")}>
+              <option value="60m">{t("interval.60m")}</option>
             </optgroup>
-            <optgroup label="日足以上">
-              <option value="1d">1日</option>
-              <option value="1wk">1週</option>
-              <option value="1mo">1月</option>
+            <optgroup label={t("interval.daily")}>
+              <option value="1d">{t("interval.1d")}</option>
+              <option value="1wk">{t("interval.1wk")}</option>
+              <option value="1mo">{t("interval.1mo")}</option>
             </optgroup>
           </select>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -332,16 +374,16 @@ function App() {
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           {loading ? (
             <button className="danger" onClick={handleCancelFetch}>
-              中止
+              {t("action.cancel")}
             </button>
           ) : (
             <button onClick={() => handleFetch()} disabled={selectedTickers.length === 0}>
-              データ取得
+              {t("action.fetch")}
             </button>
           )}
           {stocksData && (
             <button className="secondary" onClick={handleExport}>
-              CSV出力
+              {t("action.exportCsv")}
             </button>
           )}
         </div>
@@ -362,12 +404,11 @@ function App() {
         </div>
       )}
 
-      {/* ローディング */}
       {loading && (
         <div className="loading">
-          データを取得しています...
+          {t("action.loading")}
           <button className="danger" onClick={handleCancelFetch} style={{ marginLeft: 16 }}>
-            中止
+            {t("action.cancel")}
           </button>
         </div>
       )}
@@ -378,17 +419,16 @@ function App() {
           {/* サマリーカード */}
           <StatsCards stocks={stocksData.stocks ?? []} tickerNames={tickerNames} />
 
-          {/* タブ切替 */}
           <div className="panel">
             <div className="tab-bar">
               <button className={`tab ${tab === "chart" ? "active" : ""}`} onClick={() => setTab("chart")}>
-                比較チャート
+                {t("tab.comparison")}
               </button>
               <button className={`tab ${tab === "individual" ? "active" : ""}`} onClick={() => setTab("individual")}>
-                個別チャート
+                {t("tab.individual")}
               </button>
               <button className={`tab ${tab === "table" ? "active" : ""}`} onClick={() => setTab("table")}>
-                データテーブル
+                {t("tab.table")}
               </button>
             </div>
 
@@ -412,30 +452,30 @@ function App() {
         </>
       )}
 
-      {/* フッター */}
       <footer className="app-footer">
         <span>&copy; {new Date().getFullYear()} StocksView</span>
         <span className="footer-sep">&middot;</span>
-        <button className="footer-link" onClick={() => setLegalModal("terms")}>利用規約</button>
+        <button className="footer-link" onClick={() => setLegalModal("terms")}>{t("footer.terms")}</button>
         <span className="footer-sep">&middot;</span>
-        <button className="footer-link" onClick={() => setLegalModal("privacy")}>プライバシーポリシー</button>
+        <button className="footer-link" onClick={() => setLegalModal("privacy")}>{t("footer.privacy")}</button>
       </footer>
 
-      {/* 法的文書モーダル */}
       <LegalModal
         isOpen={legalModal === "privacy"}
         onClose={() => setLegalModal(null)}
-        title="プライバシーポリシー"
+        title={t("legal.privacyTitle")}
       >
         <PrivacyPolicy />
       </LegalModal>
       <LegalModal
         isOpen={legalModal === "terms"}
         onClose={() => setLegalModal(null)}
-        title="利用規約"
+        title={t("legal.termsTitle")}
       >
         <TermsOfService />
       </LegalModal>
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 }

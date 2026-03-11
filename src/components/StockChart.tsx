@@ -19,6 +19,7 @@ import type { ComparisonPoint } from "../types";
 import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
 import { useChartColors } from "../ThemeContext";
+import { useLocale } from "../i18n";
 import CandlestickChart from "./CandlestickChart";
 
 type ChartType = "line" | "area" | "smooth" | "candle";
@@ -64,6 +65,7 @@ export default function StockChart({
   onPeriodChange,
 }: Props) {
   const cc = useChartColors();
+  const { t } = useLocale();
   const [chartType, setChartType] = useState<ChartType>("line");
   const [yAxisMode, setYAxisMode] = useState<YAxisMode>("normalized");
   const [showVolume, setShowVolume] = useState(true);
@@ -172,7 +174,7 @@ export default function StockChart({
   const step = Math.max(1, Math.floor((chartData?.length ?? 0) / 20));
   const presets = getPeriodPresets();
 
-  if (!comparison?.length) return <div className="loading">データがありません</div>;
+  if (!comparison?.length) return <div className="loading">{t("chart.noData")}</div>;
 
   const showVolumeBar = yAxisMode === "price" && canShowVolume && showVolume && singleTicker != null;
   const showAnyOverlay = hasIndicators && (showVWAP || showSMA20 || showSMA50 || showSMA75 || showSMA200);
@@ -216,7 +218,7 @@ export default function StockChart({
           labelStyle={{ color: cc.text }}
           formatter={(value: number, name: string) => {
             const label =
-              { volume: "出来高", vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)" }[name] ||
+              { volume: t("chart.volume"), vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)" }[name] ||
               tickerNames[name] ||
               name;
             return [formatTooltipValue(value, name), label];
@@ -226,7 +228,7 @@ export default function StockChart({
         <Legend
           formatter={(value: string) =>
             value === "volume"
-              ? "出来高"
+              ? t("chart.volume")
               : value === "vwap"
                 ? "VWAP"
                 : value === "sma20"
@@ -361,7 +363,7 @@ export default function StockChart({
     <div className="chart-wrapper">
       <div className="chart-toolbar">
         <div className="chart-toolbar-group">
-          <span className="chart-toolbar-label">期間</span>
+          <span className="chart-toolbar-label">{t("chart.period")}</span>
           {presets.map((p) => (
             <button
               key={p.label}
@@ -374,33 +376,33 @@ export default function StockChart({
           ))}
         </div>
         <div className="chart-toolbar-group">
-          <span className="chart-toolbar-label">チャート</span>
-          {(["line", "area", "smooth", ...(singleTicker ? ["candle" as const] : [])] as ChartType[]).map((t) => (
+          <span className="chart-toolbar-label">{t("chart.chartType")}</span>
+          {(["line", "area", "smooth", ...(singleTicker ? ["candle" as const] : [])] as ChartType[]).map((ct) => (
             <button
-              key={t}
+              key={ct}
               type="button"
-              className={`chart-toolbar-btn ${chartType === t ? "active" : ""}`}
-              onClick={() => setChartType(t)}
+              className={`chart-toolbar-btn ${chartType === ct ? "active" : ""}`}
+              onClick={() => setChartType(ct)}
             >
-              {{ line: "線", area: "エリア", smooth: "スムーズ", candle: "ローソク足" }[t]}
+              {{ line: t("chart.line"), area: t("chart.area"), smooth: t("chart.smooth"), candle: t("chart.candle") }[ct]}
             </button>
           ))}
         </div>
         <div className="chart-toolbar-group">
-          <span className="chart-toolbar-label">Y軸</span>
+          <span className="chart-toolbar-label">{t("chart.yAxis")}</span>
           <button
             type="button"
             className={`chart-toolbar-btn ${yAxisMode === "normalized" ? "active" : ""}`}
             onClick={() => setYAxisMode("normalized")}
           >
-            指数(基準100)
+            {t("chart.normalized")}
           </button>
           <button
             type="button"
             className={`chart-toolbar-btn ${yAxisMode === "price" ? "active" : ""}`}
             onClick={() => setYAxisMode("price")}
           >
-            絶対値
+            {t("chart.absolute")}
           </button>
         </div>
         {canShowVolume && (
@@ -410,13 +412,13 @@ export default function StockChart({
               className={`chart-toolbar-btn ${showVolume ? "active" : ""}`}
               onClick={() => setShowVolume(!showVolume)}
             >
-              出来高 {showVolume ? "ON" : "OFF"}
+              {showVolume ? t("chart.volumeOn") : t("chart.volumeOff")}
             </button>
           </div>
         )}
         {(hasIndicators || stocks.length > 0) && (
           <div className="chart-toolbar-group">
-            <span className="chart-toolbar-label">指標</span>
+            <span className="chart-toolbar-label">{t("chart.indicators")}</span>
             {hasIndicators && (
               <button
                 type="button"
