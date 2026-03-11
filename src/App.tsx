@@ -8,6 +8,7 @@ import StockTable from "./components/StockTable";
 import StatsCards from "./components/StatsCards";
 import IndividualCharts from "./components/IndividualCharts";
 import WatchlistPanel from "./components/WatchlistPanel";
+import LegalModal, { PrivacyPolicy, TermsOfService } from "./components/LegalModal";
 
 const SUGGEST_DEBOUNCE_MS = 300;
 
@@ -34,6 +35,7 @@ function App() {
   const latestPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -397,6 +399,31 @@ function App() {
           </div>
         </>
       )}
+
+      {/* フッター */}
+      <footer className="app-footer">
+        <span>&copy; {new Date().getFullYear()} StocksView</span>
+        <span className="footer-sep">|</span>
+        <button className="footer-link" onClick={() => setLegalModal("terms")}>利用規約</button>
+        <span className="footer-sep">|</span>
+        <button className="footer-link" onClick={() => setLegalModal("privacy")}>プライバシーポリシー</button>
+      </footer>
+
+      {/* 法的文書モーダル */}
+      <LegalModal
+        isOpen={legalModal === "privacy"}
+        onClose={() => setLegalModal(null)}
+        title="プライバシーポリシー"
+      >
+        <PrivacyPolicy />
+      </LegalModal>
+      <LegalModal
+        isOpen={legalModal === "terms"}
+        onClose={() => setLegalModal(null)}
+        title="利用規約"
+      >
+        <TermsOfService />
+      </LegalModal>
     </>
   );
 }
