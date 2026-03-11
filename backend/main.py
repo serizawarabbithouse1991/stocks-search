@@ -40,8 +40,9 @@ def on_startup():
 
 def _migrate_portfolio_column():
     """既存DBに portfolio_data カラムがなければ追加"""
-    from sqlalchemy import text, inspect
-    insp = inspect(engine)
+    from sqlalchemy import text, inspect as sa_inspect
+    from database import engine
+    insp = sa_inspect(engine)
     cols = [c["name"] for c in insp.get_columns("user_settings")]
     if "portfolio_data" not in cols:
         with engine.begin() as conn:
@@ -49,7 +50,7 @@ def _migrate_portfolio_column():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:1420", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=["http://localhost:1420", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -55,7 +55,7 @@ def get_stock_data_yfinance(
         if df.empty:
             return None
         if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
+            df.columns = df.columns.get_level_values(-1)
 
         records = []
         for idx, row in df.iterrows():
@@ -110,11 +110,13 @@ def get_latest_price_yfinance(ticker: str) -> Optional[dict]:
                     "change_pct": change_pct,
                 }
         df = yf.download(ticker, period="5d", progress=False, auto_adjust=True)
-        if df.empty or "Close" not in df.columns:
+        if df.empty:
             return None
         if isinstance(df.columns, pd.MultiIndex):
             df = df.copy()
-            df.columns = df.columns.get_level_values(0)
+            df.columns = df.columns.get_level_values(-1)
+        if "Close" not in df.columns:
+            return None
         last = df["Close"].iloc[-1]
         prev = df["Close"].iloc[-2] if len(df) >= 2 else last
         return {
@@ -177,16 +179,17 @@ def get_stock_data_batch(
 
         for ticker in batch:
             try:
-                if len(batch) == 1:
-                    tdf = df
-                    if isinstance(tdf.columns, pd.MultiIndex):
-                        tdf = tdf.copy()
-                        tdf.columns = tdf.columns.get_level_values(0)
-                else:
-                    if ticker not in df.columns.get_level_values(0):
+                if isinstance(df.columns, pd.MultiIndex):
+                    if ticker in df.columns.get_level_values(0):
+                        tdf = df[ticker].copy()
+                    elif len(batch) == 1:
+                        tdf = df.copy()
+                        tdf.columns = df.columns.get_level_values(-1)
+                    else:
                         errors.append(f"{ticker}: データ取得失敗")
                         continue
-                    tdf = df[ticker].copy()
+                else:
+                    tdf = df.copy()
 
                 tdf = tdf.dropna(subset=["Close"])
                 if tdf.empty:
