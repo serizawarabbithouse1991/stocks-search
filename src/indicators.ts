@@ -116,6 +116,8 @@ export function addIndicators(rows: OHLCV[]): {
   vwap: number;
   sma20: number | null;
   sma50: number | null;
+  sma75: number | null;
+  sma200: number | null;
   rsi: number | null;
   macd: number | null;
   macdSignal: number | null;
@@ -134,6 +136,8 @@ export function addIndicators(rows: OHLCV[]): {
   const vwapArr = calcVWAP(safe);
   const sma20 = calcSMA(closes, 20);
   const sma50 = calcSMA(closes, 50);
+  const sma75 = calcSMA(closes, 75);
+  const sma200 = calcSMA(closes, 200);
   const rsi = calcRSI(closes, 14);
   const { macd, signal, histogram } = calcMACD(closes);
 
@@ -144,6 +148,8 @@ export function addIndicators(rows: OHLCV[]): {
     vwap: vwapArr[i] ?? (r.high + r.low + r.close) / 3,
     sma20: sma20[i] ?? null,
     sma50: sma50[i] ?? null,
+    sma75: sma75[i] ?? null,
+    sma200: sma200[i] ?? null,
     rsi: rsi[i] ?? null,
     macd: macd[i] ?? null,
     macdSignal: signal[i] ?? null,

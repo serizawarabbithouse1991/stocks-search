@@ -26,6 +26,8 @@ type IndicatorFlags = {
   vwap: boolean;
   sma20: boolean;
   sma50: boolean;
+  sma75: boolean;
+  sma200: boolean;
   rsi: boolean;
   macd: boolean;
   volume: boolean;
@@ -35,6 +37,8 @@ const DEFAULT_FLAGS: IndicatorFlags = {
   vwap: false,
   sma20: true,
   sma50: false,
+  sma75: false,
+  sma200: false,
   rsi: false,
   macd: false,
   volume: true,
@@ -101,6 +105,8 @@ function SingleStockChart({
               ["vwap", "VWAP"],
               ["sma20", "SMA(20)"],
               ["sma50", "SMA(50)"],
+              ["sma75", "SMA(75)"],
+              ["sma200", "SMA(200)"],
               ["rsi", "RSI"],
               ["macd", "MACD"],
             ] as [keyof IndicatorFlags, string][]
@@ -139,6 +145,8 @@ function SingleStockChart({
                 vwap: "VWAP",
                 sma20: "SMA(20)",
                 sma50: "SMA(50)",
+                sma75: "SMA(75)",
+                sma200: "SMA(200)",
               };
               return [
                 n === "volume" ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
@@ -156,12 +164,18 @@ function SingleStockChart({
           {flags.sma50 && (
             <Line yAxisId="price" type="monotone" dataKey="sma50" stroke="#f778ba" strokeWidth={1.5} dot={false} connectNulls name="sma50" />
           )}
+          {flags.sma75 && (
+            <Line yAxisId="price" type="monotone" dataKey="sma75" stroke="#56d4dd" strokeWidth={1.5} dot={false} connectNulls name="sma75" />
+          )}
+          {flags.sma200 && (
+            <Line yAxisId="price" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="sma200" />
+          )}
           {flags.volume && (
             <Bar yAxisId="vol" dataKey="volume" fill="#30363d" radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
           )}
           <Legend
             formatter={(v: string) =>
-              ({ close: "終値", volume: "出来高", vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)" }[v] ?? v)
+              ({ close: "終値", volume: "出来高", vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)", sma75: "SMA(75)", sma200: "SMA(200)" }[v] ?? v)
             }
             wrapperStyle={{ fontSize: 11 }}
           />

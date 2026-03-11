@@ -68,6 +68,8 @@ export default function StockChart({
   const [showVWAP, setShowVWAP] = useState(false);
   const [showSMA20, setShowSMA20] = useState(false);
   const [showSMA50, setShowSMA50] = useState(false);
+  const [showSMA75, setShowSMA75] = useState(false);
+  const [showSMA200, setShowSMA200] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
   const [showMACD, setShowMACD] = useState(false);
 
@@ -118,7 +120,7 @@ export default function StockChart({
   // 比較（基準100）モードでも SMA を重ねられるようにする
   const comparisonWithSMA = useMemo(() => {
     if (!comparison?.length || !stocks?.length) return comparison;
-    if (!(showSMA20 || showSMA50)) return comparison;
+    if (!(showSMA20 || showSMA50 || showSMA75 || showSMA200)) return comparison;
     const dateMap = new Map(comparison.map((c, i) => [c.date, i]));
     const enriched = comparison.map((c) => ({ ...c }));
     for (const sd of stocks) {
@@ -141,20 +143,22 @@ export default function StockChart({
       };
       if (showSMA20) makeSMA(20);
       if (showSMA50) makeSMA(50);
+      if (showSMA75) makeSMA(75);
+      if (showSMA200) makeSMA(200);
     }
     return enriched;
-  }, [comparison, stocks, showSMA20, showSMA50]);
+  }, [comparison, stocks, showSMA20, showSMA50, showSMA75, showSMA200]);
 
   const chartData = yAxisMode === "price" && canShowPrice ? priceChartData : comparisonWithSMA;
   const hasIndicators = canShowPrice && yAxisMode === "price" && priceChartData.length > 0;
-  const hasComparisonSMA = !canShowPrice && (showSMA20 || showSMA50) && stocks.length > 0;
+  const hasComparisonSMA = !canShowPrice && (showSMA20 || showSMA50 || showSMA75 || showSMA200) && stocks.length > 0;
   const step = Math.max(1, Math.floor((chartData?.length ?? 0) / 20));
   const presets = getPeriodPresets();
 
   if (!comparison?.length) return <div className="loading">データがありません</div>;
 
   const showVolumeBar = yAxisMode === "price" && canShowVolume && showVolume && singleTicker != null;
-  const showAnyOverlay = hasIndicators && (showVWAP || showSMA20 || showSMA50);
+  const showAnyOverlay = hasIndicators && (showVWAP || showSMA20 || showSMA50 || showSMA75 || showSMA200);
   const useComposed = showVolumeBar || showAnyOverlay || hasComparisonSMA;
 
   const formatTooltipValue = (value: number, name: string) => {
@@ -252,6 +256,12 @@ export default function StockChart({
         {hasIndicators && showSMA50 && (
           <Line yAxisId="main" type="monotone" dataKey="sma50" stroke="#f778ba" strokeWidth={1.5} dot={false} connectNulls name="SMA(50)" />
         )}
+        {hasIndicators && showSMA75 && (
+          <Line yAxisId="main" type="monotone" dataKey="sma75" stroke="#56d4dd" strokeWidth={1.5} dot={false} connectNulls name="SMA(75)" />
+        )}
+        {hasIndicators && showSMA200 && (
+          <Line yAxisId="main" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="SMA(200)" />
+        )}
         {hasComparisonSMA && tickers.map((ticker, i) => {
           const color = COLORS[i % COLORS.length];
           return [
@@ -281,6 +291,34 @@ export default function StockChart({
                 dot={false}
                 connectNulls
                 name={`${tickerNames[ticker] || ticker} SMA(50)`}
+              />
+            ),
+            showSMA75 && (
+              <Line
+                key={`${ticker}_sma75`}
+                yAxisId="main"
+                type="monotone"
+                dataKey={`${ticker}_sma75`}
+                stroke={color}
+                strokeWidth={1}
+                strokeDasharray="6 4"
+                dot={false}
+                connectNulls
+                name={`${tickerNames[ticker] || ticker} SMA(75)`}
+              />
+            ),
+            showSMA200 && (
+              <Line
+                key={`${ticker}_sma200`}
+                yAxisId="main"
+                type="monotone"
+                dataKey={`${ticker}_sma200`}
+                stroke={color}
+                strokeWidth={1}
+                strokeDasharray="12 4"
+                dot={false}
+                connectNulls
+                name={`${tickerNames[ticker] || ticker} SMA(200)`}
               />
             ),
           ];
@@ -385,6 +423,18 @@ export default function StockChart({
               onClick={() => setShowSMA50(!showSMA50)}
             >
               SMA(50)
+            </button>
+            <button
+              className={`chart-toolbar-btn ${showSMA75 ? "active" : ""}`}
+              onClick={() => setShowSMA75(!showSMA75)}
+            >
+              SMA(75)
+            </button>
+            <button
+              className={`chart-toolbar-btn ${showSMA200 ? "active" : ""}`}
+              onClick={() => setShowSMA200(!showSMA200)}
+            >
+              SMA(200)
             </button>
             {hasIndicators && (
               <>

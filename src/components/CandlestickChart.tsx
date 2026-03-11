@@ -23,12 +23,16 @@ interface Row {
   isUp: boolean;
   sma20: number | null;
   sma50: number | null;
+  sma75: number | null;
+  sma200: number | null;
 }
 
 export default function CandlestickChart({ stock, tickerName }: Props) {
   const [showVolume, setShowVolume] = useState(true);
   const [showSMA20, setShowSMA20] = useState(false);
   const [showSMA50, setShowSMA50] = useState(false);
+  const [showSMA75, setShowSMA75] = useState(false);
+  const [showSMA200, setShowSMA200] = useState(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -46,16 +50,22 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
       .filter((r) => r.close > 0);
     let sma20: (number | null)[] = raw.map(() => null);
     let sma50: (number | null)[] = raw.map(() => null);
+    let sma75: (number | null)[] = raw.map(() => null);
+    let sma200: (number | null)[] = raw.map(() => null);
     try {
       const ind = addIndicators(raw);
       sma20 = ind.map((r) => r.sma20);
       sma50 = ind.map((r) => r.sma50);
+      sma75 = ind.map((r) => r.sma75);
+      sma200 = ind.map((r) => r.sma200);
     } catch { /* ignore */ }
     return raw.map((r, i) => ({
       ...r,
       isUp: r.close >= r.open,
       sma20: sma20[i],
       sma50: sma50[i],
+      sma75: sma75[i],
+      sma200: sma200[i],
     }));
   }, [stock]);
 
@@ -105,6 +115,12 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
   const sma50Points = showSMA50
     ? data.map((d, i) => (d.sma50 != null ? `${xPos(i)},${yPrice(d.sma50)}` : null)).filter(Boolean)
     : [];
+  const sma75Points = showSMA75
+    ? data.map((d, i) => (d.sma75 != null ? `${xPos(i)},${yPrice(d.sma75)}` : null)).filter(Boolean)
+    : [];
+  const sma200Points = showSMA200
+    ? data.map((d, i) => (d.sma200 != null ? `${xPos(i)},${yPrice(d.sma200)}` : null)).filter(Boolean)
+    : [];
 
   return (
     <div className="candlestick-wrapper">
@@ -112,6 +128,8 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
         <button type="button" className={`chart-toolbar-btn ${showVolume ? "active" : ""}`} onClick={() => setShowVolume(!showVolume)}>出来高</button>
         <button type="button" className={`chart-toolbar-btn ${showSMA20 ? "active" : ""}`} onClick={() => setShowSMA20(!showSMA20)}>SMA(20)</button>
         <button type="button" className={`chart-toolbar-btn ${showSMA50 ? "active" : ""}`} onClick={() => setShowSMA50(!showSMA50)}>SMA(50)</button>
+        <button type="button" className={`chart-toolbar-btn ${showSMA75 ? "active" : ""}`} onClick={() => setShowSMA75(!showSMA75)}>SMA(75)</button>
+        <button type="button" className={`chart-toolbar-btn ${showSMA200 ? "active" : ""}`} onClick={() => setShowSMA200(!showSMA200)}>SMA(200)</button>
       </div>
       {hoverRow && (
         <div className="candle-tooltip">
@@ -183,6 +201,14 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
         {/* SMA(50) */}
         {sma50Points.length > 1 && (
           <polyline points={sma50Points.join(" ")} fill="none" stroke="#f778ba" strokeWidth={1.5} />
+        )}
+        {/* SMA(75) */}
+        {sma75Points.length > 1 && (
+          <polyline points={sma75Points.join(" ")} fill="none" stroke="#56d4dd" strokeWidth={1.5} />
+        )}
+        {/* SMA(200) */}
+        {sma200Points.length > 1 && (
+          <polyline points={sma200Points.join(" ")} fill="none" stroke="#d29922" strokeWidth={1.5} />
         )}
         {/* クロスヘア */}
         {hoverIdx != null && (
