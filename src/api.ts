@@ -213,6 +213,47 @@ export async function getMoomooPositions(market: string = "JP") {
   return res.json();
 }
 
+// --- Fundamentals ---
+export interface Fundamentals {
+  ticker: string;
+  name: string;
+  sector: string;
+  industry: string;
+  market_cap: number | null;
+  enterprise_value: number | null;
+  per: number | null;
+  forward_per: number | null;
+  pbr: number | null;
+  eps: number | null;
+  dividend_yield: number | null;
+  dividend_rate: number | null;
+  payout_ratio: number | null;
+  roe: number | null;
+  roa: number | null;
+  profit_margin: number | null;
+  operating_margin: number | null;
+  revenue: number | null;
+  net_income: number | null;
+  total_debt: number | null;
+  total_cash: number | null;
+  book_value: number | null;
+  target_mean_price: number | null;
+  recommendation: string;
+  fifty_two_week_high: number | null;
+  fifty_two_week_low: number | null;
+  avg_volume: number | null;
+  beta: number | null;
+  currency: string;
+  website: string;
+  summary: string;
+}
+
+export async function fetchFundamentals(ticker: string): Promise<Fundamentals | null> {
+  const res = await fetch(`${API_BASE}/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function exportCsv(tickers: string[], start: string, end: string) {
   const res = await fetch(`${API_BASE}/api/export/csv`, {
     method: "POST",

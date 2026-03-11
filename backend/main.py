@@ -272,6 +272,57 @@ def master_reload(path: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# --- Fundamentals ---
+@app.get("/api/fundamentals")
+def get_fundamentals(ticker: str = Query(...)):
+    """yfinance から銘柄のファンダメンタルズ情報を取得"""
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info or {}
+
+        def safe(key: str, default=None):
+            v = info.get(key, default)
+            if v is None or v == "":
+                return default
+            return v
+
+        return {
+            "ticker": ticker,
+            "name": safe("longName") or safe("shortName") or master.resolve_name(ticker) or ticker,
+            "sector": safe("sector", ""),
+            "industry": safe("industry", ""),
+            "market_cap": safe("marketCap"),
+            "enterprise_value": safe("enterpriseValue"),
+            "per": safe("trailingPE"),
+            "forward_per": safe("forwardPE"),
+            "pbr": safe("priceToBook"),
+            "eps": safe("trailingEps"),
+            "dividend_yield": safe("dividendYield"),
+            "dividend_rate": safe("dividendRate"),
+            "payout_ratio": safe("payoutRatio"),
+            "roe": safe("returnOnEquity"),
+            "roa": safe("returnOnAssets"),
+            "profit_margin": safe("profitMargins"),
+            "operating_margin": safe("operatingMargins"),
+            "revenue": safe("totalRevenue"),
+            "net_income": safe("netIncomeToCommon"),
+            "total_debt": safe("totalDebt"),
+            "total_cash": safe("totalCash"),
+            "book_value": safe("bookValue"),
+            "target_mean_price": safe("targetMeanPrice"),
+            "recommendation": safe("recommendationKey", ""),
+            "fifty_two_week_high": safe("fiftyTwoWeekHigh"),
+            "fifty_two_week_low": safe("fiftyTwoWeekLow"),
+            "avg_volume": safe("averageVolume"),
+            "beta": safe("beta"),
+            "currency": safe("currency", "JPY"),
+            "website": safe("website", ""),
+            "summary": safe("longBusinessSummary", ""),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- LLM ---
 class ThemeRequest(BaseModel):
     theme: str

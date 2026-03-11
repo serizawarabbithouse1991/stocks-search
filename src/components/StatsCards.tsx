@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { StockData } from "../types";
 import { calcSignal, calcSMA, calcRSI, type SignalResult, type OHLCV } from "../indicators";
+import StockDetailModal from "./StockDetailModal";
 
 interface Props {
   stocks: StockData[];
@@ -23,9 +24,7 @@ function Sparkline({ data, width = 220, height = 64 }: { data: number[]; width?:
   const isUp = data[data.length - 1] >= data[0];
   const color = isUp ? "var(--positive)" : "var(--negative)";
   const gradId = `sp-${Math.random().toString(36).slice(2, 8)}`;
-
   const areaPoints = `0,${height} ${points} ${width},${height}`;
-
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
       <defs>
@@ -46,8 +45,40 @@ function displayName(ticker: string, stockName: string | undefined, tickerNames:
   return "";
 }
 
+interface TrendMA {
+  period: number;
+  label: string;
+  value: number | null;
+  deviation: number | null;
+  direction: "up" | "down" | null;
+}
+
+function TrendArrow({ dir }: { dir: "up" | "down" | null }) {
+  if (!dir) return <span className="trend-arrow trend-neutral">—</span>;
+  return dir === "up"
+    ? <span className="trend-arrow trend-up">↗</span>
+    : <span className="trend-arrow trend-down">↘</span>;
+}
+
+function TrendRow({ trends }: { trends: TrendMA[] }) {
+  return (
+    <div className="trend-grid">
+      {trends.map((t) => (
+        <div key={t.period} className={`trend-cell ${t.direction ?? "neutral"}`}>
+          <div className="trend-label">{t.label}</div>
+          <TrendArrow dir={t.direction} />
+          <div className="trend-dev">
+            {t.deviation != null ? `${t.deviation >= 0 ? "+" : ""}${t.deviation.toFixed(1)}%` : "—"}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StatsCards({ stocks, tickerNames }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>("stats");
+  const [detailTicker, setDetailTicker] = useState<string | null>(null);
 
   const sparklineData = useMemo(() => {
     const m: Record<string, number[]> = {};
@@ -60,7 +91,7 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
   }, [stocks]);
 
   const technicals = useMemo(() => {
-    const m: Record<string, { signal: SignalResult; ma25: number | null; rsi: number | null }> = {};
+    const m: Record<string, { signal: SignalResult; ma25: number | null; rsi: number | null; trends: TrendMA[] }> = {};
     for (const s of stocks) {
       if (s.data?.length) {
         const ohlcv: OHLCV[] = s.data.map((r) => ({
@@ -72,17 +103,35 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
           volume: Number(r.volume) || 0,
         }));
         const closes = ohlcv.map((r) => r.close);
+        const last = closes[closes.length - 1];
         const sma25 = calcSMA(closes, 25);
         const rsi14 = calcRSI(closes, 14);
+
+        const makeTrend = (period: number, label: string): TrendMA => {
+          const sma = calcSMA(closes, period);
+          const val = sma[sma.length - 1];
+          if (val == null || last <= 0) return { period, label, value: null, deviation: null, direction: null };
+          const dev = ((last - val) / val) * 100;
+          return { period, label, value: val, deviation: dev, direction: last >= val ? "up" : "down" };
+        };
+
         m[s.ticker] = {
           signal: calcSignal(ohlcv),
           ma25: sma25[sma25.length - 1] ?? null,
           rsi: rsi14[rsi14.length - 1] ?? null,
+          trends: [
+            makeTrend(5, "5日線"),
+            makeTrend(25, "25日線"),
+            makeTrend(75, "75日線"),
+            makeTrend(200, "200日線"),
+          ],
         };
       }
     }
     return m;
   }, [stocks]);
+
+  const detailStock = detailTicker ? stocks.find((s) => s.ticker === detailTicker) : null;
 
   if (!stocks?.length) return null;
 
@@ -113,7 +162,12 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
           const tech = technicals[s.ticker];
           const sig = tech?.signal;
           return (
-            <div key={s.ticker} className="stat-card">
+            <div
+              key={s.ticker}
+              className="stat-card stat-card-clickable"
+              onClick={() => setDetailTicker(s.ticker)}
+              title="クリックで詳細を表示"
+            >
               <div className="stat-card-header">
                 <span className="stat-card-symbol">{symbolCode}</span>
                 {name && <span className="stat-card-name">{name}</span>}
@@ -127,6 +181,9 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
                   {sig.label}
                 </div>
               )}
+
+              {/* トレンド表示 */}
+              {tech?.trends && <TrendRow trends={tech.trends} />}
 
               {viewMode === "stats" ? (
                 <div className="stat-card-body">
@@ -197,6 +254,18 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
           );
         })}
       </div>
+
+      {/* 銘柄詳細モーダル */}
+      {detailTicker && detailStock && (
+        <StockDetailModal
+          stock={detailStock}
+          name={displayName(detailTicker, detailStock.name, tickerNames)}
+          trends={technicals[detailTicker]?.trends ?? []}
+          signal={technicals[detailTicker]?.signal ?? null}
+          rsi={technicals[detailTicker]?.rsi ?? null}
+          onClose={() => setDetailTicker(null)}
+        />
+      )}
     </>
   );
 }
