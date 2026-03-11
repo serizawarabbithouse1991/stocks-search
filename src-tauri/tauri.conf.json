@@ -1,5 +1,5 @@
 {
-  "productName": "StocksSearch",
+  "productName": "StocksView",
   "version": "1.0.0",
   "identifier": "com.stocks-search.app",
   "build": {
@@ -9,10 +9,10 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "株式銘柄比較ツール",
+    "title": "StocksView",
     "windows": [
       {
-        "title": "株式銘柄比較ツール",
+        "title": "StocksView",
         "width": 1300,
         "height": 850,
         "resizable": true

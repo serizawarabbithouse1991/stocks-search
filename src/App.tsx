@@ -199,7 +199,7 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <h1>Stock Screener - 株式銘柄比較ツール</h1>
+        <h1>StocksView</h1>
         <button
           className="theme-toggle"
           onClick={toggleTheme}

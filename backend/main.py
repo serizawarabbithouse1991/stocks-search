@@ -17,7 +17,7 @@ from stock_service import (
     normalize_for_comparison,
 )
 
-app = FastAPI(title="株式銘柄比較ツール API", version="1.0.0")
+app = FastAPI(title="StocksView API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,7 +40,7 @@ class StockQuery(BaseModel):
 # --- Endpoints ---
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "株式銘柄比較ツール API"}
+    return {"status": "ok", "message": "StocksView API"}
 
 
 @app.get("/api/search")
