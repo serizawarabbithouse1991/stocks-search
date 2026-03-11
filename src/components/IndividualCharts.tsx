@@ -95,7 +95,9 @@ function SingleStockChart({
       <div className="individual-chart-header">
         <div className="individual-chart-title">
           <span className="individual-chart-ticker">{stock.ticker}</span>
-          <span className="individual-chart-name">{name}</span>
+          {name && name !== stock.ticker && name !== stock.ticker.replace(/\.T$/, "") && (
+            <span className="individual-chart-name">{name}</span>
+          )}
           <span className={`individual-chart-change ${changePct >= 0 ? "positive" : "negative"}`}>
             {changePct >= 0 ? "+" : ""}{changePct}%
           </span>
@@ -242,7 +244,7 @@ export default function IndividualCharts({ stocks, tickerNames }: Props) {
   return (
     <div className="individual-charts">
       {stocks.map((s) => (
-        <SingleStockChart key={s.ticker} stock={s} name={tickerNames[s.ticker] || s.ticker} />
+        <SingleStockChart key={s.ticker} stock={s} name={tickerNames[s.ticker] || s.name || s.ticker} />
       ))}
     </div>
   );
