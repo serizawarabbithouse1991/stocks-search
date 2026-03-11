@@ -1568,9 +1568,9 @@ td:first-child, th:first-child {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 24px 16px 32px;
-  font-size: 0.8rem;
+  gap: 10px;
+  padding: 32px 16px 42px;
+  font-size: 1.04rem;
   color: var(--text-muted);
 }
 
@@ -1582,7 +1582,7 @@ td:first-child, th:first-child {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 1.04rem;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
