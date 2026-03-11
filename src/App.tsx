@@ -12,7 +12,7 @@ import StatsCards from "./components/StatsCards";
 import IndividualCharts from "./components/IndividualCharts";
 import WatchlistPanel from "./components/WatchlistPanel";
 import AIPanel from "./components/AIPanel";
-import PortfolioPanel from "./components/PortfolioPanel";
+import ScreenerPanel from "./components/ScreenerPanel";
 import LegalModal, { PrivacyPolicy, TermsOfService } from "./components/LegalModal";
 import SettingsPanel from "./components/SettingsPanel";
 import AuthModal from "./components/AuthModal";
@@ -584,8 +584,16 @@ function App() {
         tickerMeta={tickerMeta}
       />
 
-      {/* ポートフォリオ */}
-      <PortfolioPanel />
+      {/* スクリーナー */}
+      <ScreenerPanel
+        onAddTickers={(tickers) =>
+          setSelectedTickers((prev) => {
+            const existing = new Set(prev.map((t) => t.code));
+            const newOnes = tickers.filter((t) => !existing.has(t.code));
+            return [...prev, ...newOnes];
+          })
+        }
+      />
 
       {/* AI分析 */}
       <AIPanel

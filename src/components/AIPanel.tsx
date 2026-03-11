@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   llmThemeSuggest,
   llmAnalyze,
@@ -15,6 +15,16 @@ interface Ticker {
 interface Props {
   currentTickers: Ticker[];
   onAddTickers: (tickers: Ticker[]) => void;
+}
+
+function renderInline(text: string): ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
 }
 
 const LLM_SETTINGS_KEY = "stocksview-llm-settings";
@@ -264,14 +274,20 @@ export default function AIPanel({ currentTickers, onAddTickers }: Props) {
                 <div className="ai-report">
                   <div className="ai-report-content">
                     {report.split("\n").map((line, i) => {
-                      if (line.startsWith("**") && line.endsWith("**")) {
+                      if (line.startsWith("### ")) return <h5 key={i}>{renderInline(line.slice(4))}</h5>;
+                      if (line.startsWith("## ")) return <h4 key={i}>{renderInline(line.slice(3))}</h4>;
+                      if (line.startsWith("# ")) return <h3 key={i}>{renderInline(line.slice(2))}</h3>;
+                      if (/^\*\*.*\*\*$/.test(line.trim())) {
                         return <h4 key={i}>{line.replace(/\*\*/g, "")}</h4>;
                       }
-                      if (line.startsWith("# ")) return <h3 key={i}>{line.slice(2)}</h3>;
-                      if (line.startsWith("## ")) return <h4 key={i}>{line.slice(3)}</h4>;
-                      if (line.startsWith("- ")) return <li key={i}>{line.slice(2)}</li>;
+                      if (/^\d+\.\s/.test(line)) {
+                        return <li key={i} className="ai-numbered">{renderInline(line.replace(/^\d+\.\s/, ""))}</li>;
+                      }
+                      if (line.startsWith("- ") || line.startsWith("* ")) {
+                        return <li key={i}>{renderInline(line.slice(2))}</li>;
+                      }
                       if (line.trim() === "") return <br key={i} />;
-                      return <p key={i}>{line}</p>;
+                      return <p key={i}>{renderInline(line)}</p>;
                     })}
                   </div>
                   <p className="ai-disclaimer">

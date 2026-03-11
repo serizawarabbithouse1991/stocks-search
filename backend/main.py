@@ -368,8 +368,10 @@ async def llm_theme(req: ThemeRequest):
 
 @app.post("/api/llm/analyze")
 async def llm_analyze(req: AnalysisRequest):
-    """選択中の銘柄群をLLMが比較分析"""
+    """選択中の銘柄群をLLMが比較分析（株価・テクニカルデータを自動補完）"""
     try:
+        import fundamentals_cache
+
         tickers_info = []
         for ticker in req.tickers:
             entry = master.get_entry(ticker)
@@ -377,6 +379,21 @@ async def llm_analyze(req: AnalysisRequest):
             if entry:
                 info["name"] = entry["name"]
                 info["sector"] = entry.get("sector33", "")
+
+            funda = fundamentals_cache.get_or_fetch(ticker)
+            if funda:
+                info["last_close"] = funda.get("market_cap")
+                info["rsi"] = "N/A"
+                if funda.get("per"):
+                    info["per"] = round(funda["per"], 1)
+                if funda.get("dividend_yield"):
+                    info["dividend_yield"] = f"{round(funda['dividend_yield'] * 100, 2)}%"
+
+            latest = get_latest_price_yfinance(ticker)
+            if latest:
+                info["last_close"] = latest.get("price", "?")
+                info["change_pct"] = latest.get("change_pct", "?")
+
             tickers_info.append(info)
 
         report = await llm_service.analyze_stocks(
@@ -404,8 +421,50 @@ def llm_providers():
     }
 
 
+# --- Screener ---
+import screener_service
+
+
+class ScreenerCondition(BaseModel):
+    field: str
+    op: str
+    value: str | float | int
+
+
+class ScreenerRequest(BaseModel):
+    conditions: list[ScreenerCondition] = []
+    sort_by: Optional[str] = None
+    sort_dir: str = "desc"
+    limit: int = 50
+    market_filter: Optional[str] = None
+
+
+@app.post("/api/screener")
+def run_screener(req: ScreenerRequest):
+    """スクリーニング条件で銘柄を絞り込む"""
+    try:
+        conditions = [
+            {"field": c.field, "op": c.op, "value": c.value}
+            for c in req.conditions
+        ]
+        result = screener_service.run_screen(
+            conditions=conditions,
+            sort_by=req.sort_by,
+            sort_dir=req.sort_dir,
+            limit=req.limit,
+            market_filter=req.market_filter,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/screener/fields")
+def screener_fields():
+    """スクリーニング可能なフィールド一覧"""
+    return {"fields": screener_service.get_available_fields()}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
-
-

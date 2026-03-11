@@ -1,6 +1,6 @@
 const API_BASE =
   (typeof import.meta.env !== "undefined" && import.meta.env.VITE_API_BASE) ||
-  "http://127.0.0.1:8001";
+  "http://127.0.0.1:8002";
 
 function authHeaders(token: string): Record<string, string> {
   return {

@@ -141,6 +141,77 @@ export async function llmAnalyze(
   return res.json();
 }
 
+// --- Screener ---
+export interface ScreenerField {
+  field: string;
+  label: string;
+  type: "number" | "string";
+  group: string;
+}
+
+export interface ScreenerCondition {
+  field: string;
+  op: string;
+  value: string | number;
+}
+
+export interface ScreenerResult {
+  ticker: string;
+  name: string;
+  market: string;
+  sector33: string;
+  scale: string;
+  per?: number | null;
+  pbr?: number | null;
+  roe?: number | null;
+  roa?: number | null;
+  dividend_yield?: number | null;
+  market_cap?: number | null;
+  profit_margin?: number | null;
+  operating_margin?: number | null;
+  beta?: number | null;
+  avg_volume?: number | null;
+  recommendation?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ScreenerResponse {
+  results: ScreenerResult[];
+  total_scanned: number;
+  total_matched: number;
+}
+
+export async function fetchScreenerFields(): Promise<{ fields: ScreenerField[] }> {
+  const res = await fetch(`${API_BASE}/api/screener/fields`);
+  if (!res.ok) return { fields: [] };
+  return res.json();
+}
+
+export async function runScreener(
+  conditions: ScreenerCondition[],
+  sortBy?: string,
+  sortDir: string = "desc",
+  limit: number = 50,
+  marketFilter?: string,
+): Promise<ScreenerResponse> {
+  const res = await fetch(`${API_BASE}/api/screener`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      conditions,
+      sort_by: sortBy,
+      sort_dir: sortDir,
+      limit,
+      market_filter: marketFilter || null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Screener failed");
+  }
+  return res.json();
+}
+
 // --- Portfolio ---
 export interface PortfolioPosition {
   id: number;

@@ -2447,3 +2447,211 @@ td:first-child, th:first-child {
   color: var(--positive) !important;
   font-size: 0.82rem;
 }
+
+/* ── Screener ── */
+.screener-panel {
+  margin-top: 12px;
+}
+.screener-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.screener-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.screener-presets-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.screener-preset-btn {
+  padding: 4px 14px;
+  font-size: 0.82rem;
+  border-radius: 20px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.screener-preset-btn:hover {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+.screener-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.screener-condition-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.screener-condition-row select {
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+.screener-condition-row input {
+  flex: 1 1 100px;
+  min-width: 80px;
+}
+.screener-remove-btn {
+  background: transparent;
+  border: 1px solid var(--negative);
+  color: var(--negative);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.screener-remove-btn:hover {
+  background: var(--negative);
+  color: #fff;
+}
+.screener-add-btn {
+  align-self: flex-start;
+  font-size: 0.82rem;
+}
+.screener-options {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.screener-options label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.screener-options select {
+  font-size: 0.82rem;
+  padding: 3px 6px;
+}
+.screener-results {
+  margin-top: 4px;
+}
+.screener-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.screener-results-actions {
+  display: flex;
+  gap: 8px;
+}
+.screener-results-actions button {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+}
+.screener-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.screener-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.screener-table th,
+.screener-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.screener-table thead th {
+  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.screener-th-check {
+  width: 32px;
+}
+.screener-th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.screener-th-sortable:hover {
+  color: var(--accent);
+}
+.screener-sort-arrow {
+  font-size: 0.7rem;
+}
+.screener-row-selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.screener-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.screener-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-size: 0.85rem;
+}
+.screener-custom-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.screener-preset-custom {
+  border-color: var(--positive) !important;
+  color: var(--positive) !important;
+}
+.screener-preset-custom:hover {
+  background: var(--positive) !important;
+  color: var(--bg-primary) !important;
+}
+.screener-preset-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+.screener-preset-delete:hover {
+  color: var(--negative);
+}
+.screener-condition-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.screener-save-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.screener-save-row input {
+  font-size: 0.82rem;
+  padding: 3px 8px;
+  width: 140px;
+}
+.screener-save-row button {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+}
+.ai-numbered {
+  list-style-type: decimal;
+  margin-left: 20px;
+}
