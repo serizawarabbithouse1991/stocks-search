@@ -1521,18 +1521,18 @@ td:first-child, th:first-child {
 .settings-panel {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   width: 340px;
   max-width: 85vw;
   background: var(--bg-secondary);
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   z-index: 910;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
 }
 
 .settings-panel.open {
