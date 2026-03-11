@@ -257,6 +257,13 @@ function App() {
                 <button onClick={() => removeTicker(t.code)}>&times;</button>
               </span>
             ))}
+            <button
+              className="danger"
+              style={{ padding: "4px 12px", fontSize: "0.82rem" }}
+              onClick={() => { setSelectedTickers([]); setStocksData(null); }}
+            >
+              全て削除
+            </button>
           </div>
         )}
 
