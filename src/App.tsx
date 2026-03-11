@@ -32,6 +32,8 @@ function App() {
   const suggestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const latestPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -40,18 +42,22 @@ function App() {
         setShowResults(false);
         return;
       }
+      searchAbortRef.current?.abort();
+      const ac = new AbortController();
+      searchAbortRef.current = ac;
       setSearching(true);
       setErrors([]);
       try {
-        const res = await searchStocks(q, true);
+        const res = await searchStocks(q, true, ac.signal);
         setSearchResults(res.results || []);
         setShowResults(true);
         setHighlightIndex(-1);
       } catch (e: any) {
+        if (e.name === "AbortError") return;
         setErrors([e.message]);
         setSearchResults([]);
       } finally {
-        setSearching(false);
+        if (!ac.signal.aborted) setSearching(false);
       }
     },
     []
@@ -135,6 +141,9 @@ function App() {
 
   const handleFetch = async (range?: { start: string; end: string }) => {
     if (selectedTickers.length === 0) return;
+    fetchAbortRef.current?.abort();
+    const ac = new AbortController();
+    fetchAbortRef.current = ac;
     const [s, e] = range ? [range.start, range.end] : [startDate, endDate];
     if (range) {
       setStartDate(s);
@@ -144,14 +153,24 @@ function App() {
     setErrors([]);
     try {
       const codes = selectedTickers.map((t) => t.code);
-      const res: StocksResponse = await fetchStocks(codes, s, e, timeInterval);
+      const res: StocksResponse = await fetchStocks(codes, s, e, timeInterval, ac.signal);
       setStocksData(res);
       if (res.errors?.length) setErrors(res.errors);
     } catch (err: any) {
+      if (err.name === "AbortError") {
+        setErrors(["データ取得を中止しました"]);
+        return;
+      }
       setErrors([err.message]);
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
+  };
+
+  const handleCancelFetch = () => {
+    fetchAbortRef.current?.abort();
+    fetchAbortRef.current = null;
+    setLoading(false);
   };
 
   const handlePeriodChange = (start: string, end: string) => {
@@ -280,9 +299,15 @@ function App() {
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           <span className="date-separator">〜</span>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          <button onClick={() => handleFetch()} disabled={loading || selectedTickers.length === 0}>
-            {loading ? "取得中..." : "データ取得"}
-          </button>
+          {loading ? (
+            <button className="danger" onClick={handleCancelFetch}>
+              中止
+            </button>
+          ) : (
+            <button onClick={() => handleFetch()} disabled={selectedTickers.length === 0}>
+              データ取得
+            </button>
+          )}
           {stocksData && (
             <button className="secondary" onClick={handleExport}>
               CSV出力
@@ -307,7 +332,14 @@ function App() {
       )}
 
       {/* ローディング */}
-      {loading && <div className="loading">データを取得しています...</div>}
+      {loading && (
+        <div className="loading">
+          データを取得しています...
+          <button className="danger" onClick={handleCancelFetch} style={{ marginLeft: 16 }}>
+            中止
+          </button>
+        </div>
+      )}
 
       {/* 結果表示 */}
       {stocksData && !loading && (

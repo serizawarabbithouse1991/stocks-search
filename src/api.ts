@@ -2,9 +2,9 @@ const API_BASE =
   (typeof import.meta.env !== "undefined" && import.meta.env.VITE_API_BASE) ||
   "http://127.0.0.1:8001";
 
-export async function searchStocks(query: string, fuzzy: boolean = true) {
+export async function searchStocks(query: string, fuzzy: boolean = true, signal?: AbortSignal) {
   const params = new URLSearchParams({ q: query, source: "yfinance", fuzzy: String(fuzzy) });
-  const res = await fetch(`${API_BASE}/api/search?${params}`);
+  const res = await fetch(`${API_BASE}/api/search?${params}`, { signal });
   if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
   return res.json();
 }
@@ -13,12 +13,14 @@ export async function fetchStocks(
   tickers: string[],
   start: string,
   end: string,
-  interval: string = "1d"
+  interval: string = "1d",
+  signal?: AbortSignal
 ) {
   const res = await fetch(`${API_BASE}/api/stocks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tickers, start, end, source: "yfinance", interval }),
+    signal,
   });
   if (!res.ok) throw new Error(`Fetch failed: ${res.statusText}`);
   return res.json();
