@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import {
   ComposedChart,
+  LineChart,
+  AreaChart,
   Line,
+  Area,
   Bar,
   Cell,
   XAxis,
@@ -16,13 +19,9 @@ import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
 import { useChartColors } from "../ThemeContext";
 import { useLocale } from "../i18n";
+import CandlestickChart from "./CandlestickChart";
 
-interface Props {
-  stocks: StockData[];
-  tickerNames: Record<string, string>;
-}
-
-const PRICE_COLOR = "#58a6ff";
+type ChartType = "line" | "area" | "smooth" | "candle";
 
 type IndicatorFlags = {
   vwap: boolean;
@@ -46,30 +45,53 @@ const DEFAULT_FLAGS: IndicatorFlags = {
   volume: true,
 };
 
+const PRICE_COLOR = "#58a6ff";
+
+interface Props {
+  stocks: StockData[];
+  tickerNames: Record<string, string>;
+  startDate: string;
+  endDate: string;
+  onPeriodChange?: (start: string, end: string) => void;
+}
+
+function getPeriodPresets(): { label: string; start: string; end: string }[] {
+  const end = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return [
+    { label: "1M", start: fmt(new Date(end.getFullYear(), end.getMonth() - 1, end.getDate())), end: fmt(end) },
+    { label: "3M", start: fmt(new Date(end.getFullYear(), end.getMonth() - 3, end.getDate())), end: fmt(end) },
+    { label: "6M", start: fmt(new Date(end.getFullYear(), end.getMonth() - 6, end.getDate())), end: fmt(end) },
+    { label: "1Y", start: fmt(new Date(end.getFullYear() - 1, end.getMonth(), end.getDate())), end: fmt(end) },
+  ];
+}
+
 function SingleStockChart({
   stock,
   name,
+  chartType,
+  flags,
 }: {
   stock: StockData;
   name: string;
+  chartType: ChartType;
+  flags: IndicatorFlags;
 }) {
   const cc = useChartColors();
   const { t } = useLocale();
-  const [flags, setFlags] = useState<IndicatorFlags>({ ...DEFAULT_FLAGS });
-
-  const toggle = (key: keyof IndicatorFlags) =>
-    setFlags((f) => ({ ...f, [key]: !f[key] }));
 
   const data = useMemo(() => {
     if (!stock.data?.length) return [];
-    const rows = stock.data.map((r) => ({
-      date: String(r.date ?? ""),
-      open: Number(r.open) || 0,
-      high: Number(r.high) || 0,
-      low: Number(r.low) || 0,
-      close: Number(r.close) || 0,
-      volume: Number(r.volume) || 0,
-    })).filter((r) => r.close > 0);
+    const rows = stock.data
+      .map((r) => ({
+        date: String(r.date ?? ""),
+        open: Number(r.open) || 0,
+        high: Number(r.high) || 0,
+        low: Number(r.low) || 0,
+        close: Number(r.close) || 0,
+        volume: Number(r.volume) || 0,
+      }))
+      .filter((r) => r.close > 0);
     if (rows.length === 0) return [];
     try {
       return addIndicators(rows);
@@ -79,6 +101,8 @@ function SingleStockChart({
         vwap: (r.high + r.low + r.close) / 3,
         sma20: null as number | null,
         sma50: null as number | null,
+        sma75: null as number | null,
+        sma200: null as number | null,
         rsi: null as number | null,
         macd: null as number | null,
         macdSignal: null as number | null,
@@ -92,6 +116,141 @@ function SingleStockChart({
   const step = Math.max(1, Math.floor(data.length / 18));
   const changePct = stock.change_pct;
 
+  if (chartType === "candle") {
+    return (
+      <div className="individual-chart-card">
+        <div className="individual-chart-header">
+          <div className="individual-chart-title">
+            <span className="individual-chart-ticker">{stock.ticker}</span>
+            {name && name !== stock.ticker && name !== stock.ticker.replace(/\.T$/, "") && (
+              <span className="individual-chart-name">{name}</span>
+            )}
+            <span className={`individual-chart-change ${changePct >= 0 ? "positive" : "negative"}`}>
+              {changePct >= 0 ? "+" : ""}{changePct}%
+            </span>
+          </div>
+        </div>
+        <CandlestickChart stock={stock} tickerName={name} />
+      </div>
+    );
+  }
+
+  const isArea = chartType === "area";
+  const showVolumeBar = flags.volume;
+  const showAnyOverlay = flags.vwap || flags.sma20 || flags.sma50 || flags.sma75 || flags.sma200;
+  const useComposed = showVolumeBar || showAnyOverlay;
+
+  const renderMainChart = () => {
+    const ChartWrapper = useComposed ? ComposedChart : isArea ? AreaChart : LineChart;
+    return (
+      <ChartWrapper data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
+        <XAxis
+          dataKey="date"
+          tick={{ fill: cc.text, fontSize: 10 }}
+          tickFormatter={(v: string) => v.slice(5)}
+          interval={step}
+        />
+        <YAxis yAxisId="price" tick={{ fill: cc.text, fontSize: 10 }} domain={["auto", "auto"]} />
+        {showVolumeBar && (
+          <YAxis yAxisId="vol" orientation="right" hide domain={[0, (dataMax: number) => dataMax * 4]} />
+        )}
+        <Tooltip
+          contentStyle={{
+            background: cc.tooltipBg,
+            border: `1px solid ${cc.tooltipBorder}`,
+            borderRadius: 6,
+            fontSize: 12,
+          }}
+          labelStyle={{ color: cc.text }}
+          formatter={(value: number, n: string) => {
+            const nameMap: Record<string, string> = {
+              close: t("chart.close"),
+              volume: t("chart.volume"),
+              vwap: "VWAP",
+              sma20: "SMA(20)",
+              sma50: "SMA(50)",
+              sma75: "SMA(75)",
+              sma200: "SMA(200)",
+            };
+            return [
+              n === "volume"
+                ? value.toLocaleString()
+                : value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+              nameMap[n] ?? n,
+            ];
+          }}
+        />
+        {isArea ? (
+          <Area
+            yAxisId="price"
+            type="monotone"
+            dataKey="close"
+            stroke={PRICE_COLOR}
+            fill={PRICE_COLOR}
+            fillOpacity={0.15}
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+            name="close"
+          />
+        ) : (
+          <Line
+            yAxisId="price"
+            type={chartType === "smooth" ? "monotone" : "linear"}
+            dataKey="close"
+            stroke={PRICE_COLOR}
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+            name="close"
+          />
+        )}
+        {flags.vwap && (
+          <Line yAxisId="price" type="monotone" dataKey="vwap" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="vwap" />
+        )}
+        {flags.sma20 && (
+          <Line yAxisId="price" type="monotone" dataKey="sma20" stroke="#3fb950" strokeWidth={1.5} dot={false} connectNulls name="sma20" />
+        )}
+        {flags.sma50 && (
+          <Line yAxisId="price" type="monotone" dataKey="sma50" stroke="#f778ba" strokeWidth={1.5} dot={false} connectNulls name="sma50" />
+        )}
+        {flags.sma75 && (
+          <Line yAxisId="price" type="monotone" dataKey="sma75" stroke="#56d4dd" strokeWidth={1.5} dot={false} connectNulls name="sma75" />
+        )}
+        {flags.sma200 && (
+          <Line yAxisId="price" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="sma200" />
+        )}
+        {showVolumeBar && (
+          <Bar
+            yAxisId="vol"
+            dataKey="volume"
+            fill={cc.volumeFill}
+            opacity={0.35}
+            radius={[2, 2, 0, 0]}
+            maxBarSize={20}
+            isAnimationActive={false}
+            name="volume"
+          />
+        )}
+        <Legend
+          formatter={(v: string) =>
+            ({
+              close: t("chart.close"),
+              volume: t("chart.volume"),
+              vwap: "VWAP",
+              sma20: "SMA(20)",
+              sma50: "SMA(50)",
+              sma75: "SMA(75)",
+              sma200: "SMA(200)",
+            }[v] ?? v)
+          }
+          wrapperStyle={{ fontSize: 11 }}
+        />
+      </ChartWrapper>
+    );
+  };
+
   return (
     <div className="individual-chart-card">
       <div className="individual-chart-header">
@@ -104,7 +263,116 @@ function SingleStockChart({
             {changePct >= 0 ? "+" : ""}{changePct}%
           </span>
         </div>
-        <div className="chart-toolbar" style={{ padding: 0, borderBottom: "none", marginBottom: 0 }}>
+      </div>
+
+      <ResponsiveContainer width="100%" height={280}>
+        {renderMainChart()}
+      </ResponsiveContainer>
+
+      {flags.rsi && (
+        <div className="chart-subpanel">
+          <div className="chart-subpanel-title">RSI(14)</div>
+          <ResponsiveContainer width="100%" height={100}>
+            <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
+              <XAxis dataKey="date" hide />
+              <YAxis domain={[0, 100]} tick={{ fill: cc.text, fontSize: 10 }} width={32} />
+              <ReferenceLine y={70} stroke="#f85149" strokeDasharray="2 2" />
+              <ReferenceLine y={30} stroke="#3fb950" strokeDasharray="2 2" />
+              <Tooltip
+                contentStyle={{
+                  background: cc.tooltipBg,
+                  border: `1px solid ${cc.tooltipBorder}`,
+                  borderRadius: 6,
+                  fontSize: 11,
+                }}
+                formatter={(v: number) => [v.toFixed(1), "RSI"]}
+              />
+              <Line type="monotone" dataKey="rsi" stroke="#bc8cff" strokeWidth={2} dot={false} connectNulls name="RSI" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {flags.macd && (
+        <div className="chart-subpanel">
+          <div className="chart-subpanel-title">MACD(12,26,9)</div>
+          <ResponsiveContainer width="100%" height={100}>
+            <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
+              <XAxis dataKey="date" hide />
+              <YAxis tick={{ fill: cc.text, fontSize: 10 }} width={48} />
+              <Tooltip
+                contentStyle={{
+                  background: cc.tooltipBg,
+                  border: `1px solid ${cc.tooltipBorder}`,
+                  borderRadius: 6,
+                  fontSize: 11,
+                }}
+                formatter={(v: number, n: string) => [
+                  v?.toFixed(3) ?? v,
+                  { macd: "MACD", macdSignal: "Signal", macdHistogram: "Histogram" }[n] ?? n,
+                ]}
+              />
+              <Bar dataKey="macdHistogram" maxBarSize={4} isAnimationActive={false}>
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={entry.macdHistogram != null && entry.macdHistogram >= 0 ? "#3fb950" : "#f85149"} />
+                ))}
+              </Bar>
+              <Line type="monotone" dataKey="macd" stroke="#58a6ff" strokeWidth={1.5} dot={false} connectNulls name="macd" />
+              <Line type="monotone" dataKey="macdSignal" stroke="#f0883e" strokeWidth={1} dot={false} connectNulls name="macdSignal" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function IndividualCharts({ stocks, tickerNames, startDate, endDate, onPeriodChange }: Props) {
+  const { t } = useLocale();
+  const [chartType, setChartType] = useState<ChartType>("line");
+  const [flags, setFlags] = useState<IndicatorFlags>({ ...DEFAULT_FLAGS });
+
+  const toggle = (key: keyof IndicatorFlags) =>
+    setFlags((f) => ({ ...f, [key]: !f[key] }));
+
+  const presets = getPeriodPresets();
+
+  if (!stocks?.length) return <div className="loading">データがありません</div>;
+
+  return (
+    <div className="individual-charts">
+      {/* グローバルツールバー */}
+      <div className="chart-toolbar">
+        <div className="chart-toolbar-group">
+          <span className="chart-toolbar-label">{t("chart.period")}</span>
+          {presets.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              className={`chart-toolbar-btn ${startDate === p.start ? "active" : ""}`}
+              onClick={() => onPeriodChange?.(p.start, p.end)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="chart-toolbar-group">
+          <span className="chart-toolbar-label">{t("chart.chartType")}</span>
+          {(["line", "area", "smooth", "candle"] as ChartType[]).map((ct) => (
+            <button
+              key={ct}
+              type="button"
+              className={`chart-toolbar-btn ${chartType === ct ? "active" : ""}`}
+              onClick={() => setChartType(ct)}
+            >
+              {{ line: t("chart.line"), area: t("chart.area"), smooth: t("chart.smooth"), candle: t("chart.candle") }[ct]}
+            </button>
+          ))}
+        </div>
+        <div className="chart-toolbar-group">
+          <span className="chart-toolbar-label">{t("chart.indicators")}</span>
           {(
             [
               ["volume", t("chart.volume")],
@@ -129,124 +397,15 @@ function SingleStockChart({
         </div>
       </div>
 
-      {/* メインチャート: 価格 + オーバーレイ指標 + 出来高 */}
-      <ResponsiveContainer width="100%" height={280}>
-        <ComposedChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-          <XAxis
-            dataKey="date"
-            tick={{ fill: cc.text, fontSize: 10 }}
-            tickFormatter={(v: string) => v.slice(5)}
-            interval={step}
-          />
-          <YAxis yAxisId="price" tick={{ fill: cc.text, fontSize: 10 }} domain={["auto", "auto"]} />
-          {flags.volume && <YAxis yAxisId="vol" orientation="right" hide domain={[0, (dataMax: number) => dataMax * 4]} />}
-          <Tooltip
-            contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 12 }}
-            labelStyle={{ color: cc.text }}
-            formatter={(value: number, n: string) => {
-              const nameMap: Record<string, string> = {
-                close: t("chart.close"),
-                volume: t("chart.volume"),
-                vwap: "VWAP",
-                sma20: "SMA(20)",
-                sma50: "SMA(50)",
-                sma75: "SMA(75)",
-                sma200: "SMA(200)",
-              };
-              return [
-                n === "volume" ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
-                nameMap[n] ?? n,
-              ];
-            }}
-          />
-          <Line yAxisId="price" type="monotone" dataKey="close" stroke={PRICE_COLOR} strokeWidth={2} dot={false} connectNulls name="close" />
-          {flags.vwap && (
-            <Line yAxisId="price" type="monotone" dataKey="vwap" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="vwap" />
-          )}
-          {flags.sma20 && (
-            <Line yAxisId="price" type="monotone" dataKey="sma20" stroke="#3fb950" strokeWidth={1.5} dot={false} connectNulls name="sma20" />
-          )}
-          {flags.sma50 && (
-            <Line yAxisId="price" type="monotone" dataKey="sma50" stroke="#f778ba" strokeWidth={1.5} dot={false} connectNulls name="sma50" />
-          )}
-          {flags.sma75 && (
-            <Line yAxisId="price" type="monotone" dataKey="sma75" stroke="#56d4dd" strokeWidth={1.5} dot={false} connectNulls name="sma75" />
-          )}
-          {flags.sma200 && (
-            <Line yAxisId="price" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="sma200" />
-          )}
-          {flags.volume && (
-            <Bar yAxisId="vol" dataKey="volume" fill={cc.volumeFill} opacity={0.35} radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
-          )}
-          <Legend
-            formatter={(v: string) =>
-              ({ close: "終値", volume: "出来高", vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)", sma75: "SMA(75)", sma200: "SMA(200)" }[v] ?? v)
-            }
-            wrapperStyle={{ fontSize: 11 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-
-      {/* RSI サブチャート */}
-      {flags.rsi && (
-        <div className="chart-subpanel">
-          <div className="chart-subpanel-title">RSI(14)</div>
-          <ResponsiveContainer width="100%" height={100}>
-            <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-              <XAxis dataKey="date" hide />
-              <YAxis domain={[0, 100]} tick={{ fill: cc.text, fontSize: 10 }} width={32} />
-              <ReferenceLine y={70} stroke="#f85149" strokeDasharray="2 2" />
-              <ReferenceLine y={30} stroke="#3fb950" strokeDasharray="2 2" />
-              <Tooltip
-                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 11 }}
-                formatter={(v: number) => [v.toFixed(1), "RSI"]}
-              />
-              <Line type="monotone" dataKey="rsi" stroke="#bc8cff" strokeWidth={2} dot={false} connectNulls name="RSI" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* MACD サブチャート */}
-      {flags.macd && (
-        <div className="chart-subpanel">
-          <div className="chart-subpanel-title">MACD(12,26,9)</div>
-          <ResponsiveContainer width="100%" height={100}>
-            <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-              <XAxis dataKey="date" hide />
-              <YAxis tick={{ fill: cc.text, fontSize: 10 }} width={48} />
-              <Tooltip
-                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 11 }}
-                formatter={(v: number, n: string) => [
-                  v?.toFixed(3) ?? v,
-                  { macd: "MACD", macdSignal: "Signal", macdHistogram: "Histogram" }[n] ?? n,
-                ]}
-              />
-              <Bar dataKey="macdHistogram" maxBarSize={4} isAnimationActive={false}>
-                {data.map((entry, i) => (
-                  <Cell key={i} fill={entry.macdHistogram != null && entry.macdHistogram >= 0 ? "#3fb950" : "#f85149"} />
-                ))}
-              </Bar>
-              <Line type="monotone" dataKey="macd" stroke="#58a6ff" strokeWidth={1.5} dot={false} connectNulls name="macd" />
-              <Line type="monotone" dataKey="macdSignal" stroke="#f0883e" strokeWidth={1} dot={false} connectNulls name="macdSignal" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function IndividualCharts({ stocks, tickerNames }: Props) {
-  if (!stocks?.length) return <div className="loading">データがありません</div>;
-
-  return (
-    <div className="individual-charts">
+      {/* 各銘柄チャート */}
       {stocks.map((s) => (
-        <SingleStockChart key={s.ticker} stock={s} name={tickerNames[s.ticker] || s.name || s.ticker} />
+        <SingleStockChart
+          key={s.ticker}
+          stock={s}
+          name={tickerNames[s.ticker] || s.name || s.ticker}
+          chartType={chartType}
+          flags={flags}
+        />
       ))}
     </div>
   );

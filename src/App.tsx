@@ -647,7 +647,13 @@ function App() {
               />
             )}
             {tab === "individual" && (
-              <IndividualCharts stocks={stocksData.stocks ?? []} tickerNames={tickerNames} />
+              <IndividualCharts
+                stocks={stocksData.stocks ?? []}
+                tickerNames={tickerNames}
+                startDate={startDate}
+                endDate={endDate}
+                onPeriodChange={handlePeriodChange}
+              />
             )}
             {tab === "table" && (
               <StockTable stocks={stocksData.stocks ?? []} tickerNames={tickerNames} />
