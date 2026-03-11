@@ -437,11 +437,12 @@ class ScreenerRequest(BaseModel):
     sort_dir: str = "desc"
     limit: int = 50
     market_filter: Optional[str] = None
+    region: str = "JP"
 
 
 @app.post("/api/screener")
 def run_screener(req: ScreenerRequest):
-    """スクリーニング条件で銘柄を絞り込む"""
+    """スクリーニング条件で銘柄を絞り込む（JP/US対応）"""
     try:
         conditions = [
             {"field": c.field, "op": c.op, "value": c.value}
@@ -453,6 +454,7 @@ def run_screener(req: ScreenerRequest):
             sort_dir=req.sort_dir,
             limit=req.limit,
             market_filter=req.market_filter,
+            region=req.region,
         )
         return result
     except Exception as e:
@@ -460,9 +462,32 @@ def run_screener(req: ScreenerRequest):
 
 
 @app.get("/api/screener/fields")
-def screener_fields():
+def screener_fields(region: str = "JP"):
     """スクリーニング可能なフィールド一覧"""
-    return {"fields": screener_service.get_available_fields()}
+    return {"fields": screener_service.get_available_fields(region)}
+
+
+@app.get("/api/us/status")
+def us_master_status():
+    """US株マスタの状態"""
+    import us_master
+    return us_master.status()
+
+
+@app.post("/api/us/refresh")
+def us_master_refresh():
+    """US株マスタを強制更新"""
+    import us_master
+    count = us_master.refresh(force=True)
+    return {"count": count, "status": us_master.status()}
+
+
+@app.get("/api/us/search")
+def us_search(q: str = "", limit: int = 20):
+    """US株検索"""
+    import us_master
+    results = us_master.search(q, limit)
+    return {"results": results, "count": len(results)}
 
 
 if __name__ == "__main__":

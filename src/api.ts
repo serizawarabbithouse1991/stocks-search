@@ -158,9 +158,13 @@ export interface ScreenerCondition {
 export interface ScreenerResult {
   ticker: string;
   name: string;
-  market: string;
-  sector33: string;
-  scale: string;
+  market?: string;
+  sector33?: string;
+  scale?: string;
+  sector?: string;
+  indices?: string;
+  exchange?: string;
+  sub_industry?: string;
   per?: number | null;
   pbr?: number | null;
   roe?: number | null;
@@ -181,8 +185,8 @@ export interface ScreenerResponse {
   total_matched: number;
 }
 
-export async function fetchScreenerFields(): Promise<{ fields: ScreenerField[] }> {
-  const res = await fetch(`${API_BASE}/api/screener/fields`);
+export async function fetchScreenerFields(region: string = "JP"): Promise<{ fields: ScreenerField[] }> {
+  const res = await fetch(`${API_BASE}/api/screener/fields?region=${region}`);
   if (!res.ok) return { fields: [] };
   return res.json();
 }
@@ -193,6 +197,7 @@ export async function runScreener(
   sortDir: string = "desc",
   limit: number = 50,
   marketFilter?: string,
+  region: string = "JP",
 ): Promise<ScreenerResponse> {
   const res = await fetch(`${API_BASE}/api/screener`, {
     method: "POST",
@@ -203,6 +208,7 @@ export async function runScreener(
       sort_dir: sortDir,
       limit,
       market_filter: marketFilter || null,
+      region,
     }),
   });
   if (!res.ok) {
