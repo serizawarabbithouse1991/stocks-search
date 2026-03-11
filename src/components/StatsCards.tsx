@@ -39,8 +39,8 @@ function Sparkline({ data, width = 220, height = 64 }: { data: number[]; width?:
   );
 }
 
-function displayName(ticker: string, tickerNames: Record<string, string>): string {
-  const name = tickerNames[ticker];
+function displayName(ticker: string, stockName: string | undefined, tickerNames: Record<string, string>): string {
+  const name = tickerNames[ticker] || stockName;
   if (name && name !== ticker && name !== ticker.replace(/\.T$/, "")) return name;
   return "";
 }
@@ -82,7 +82,7 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
       </div>
       <div className="stats-grid">
         {stocks.map((s) => {
-          const name = displayName(s.ticker, tickerNames);
+          const name = displayName(s.ticker, s.name, tickerNames);
           const symbolCode = s.ticker;
           return (
             <div key={s.ticker} className="stat-card">
