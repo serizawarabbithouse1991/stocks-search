@@ -3,6 +3,7 @@
 import os
 import time
 import requests
+import difflib
 from typing import Optional
 
 JQUANTS_API_BASE = "https://api.jquants.com/v2"
@@ -91,22 +92,41 @@ class JQuantsClient:
         data = self._get("/listed/info")
         return data.get("info", [])
 
-    def search_stocks(self, query: str) -> list[dict]:
-        """銘柄コードまたは銘柄名で検索"""
+    def search_stocks(self, query: str, fuzzy: bool = False) -> list[dict]:
+        """銘柄コードまたは銘柄名で検索。fuzzy=True であいまい検索（ typo 許容）"""
         all_stocks = self.list_stocks()
-        query_upper = query.upper()
-        results = []
+        query_stripped = query.strip()
+        if not query_stripped:
+            return []
+        query_upper = query_stripped.upper()
+        exact_matches = []
+        fuzzy_candidates = []  # (score, stock)
+
         for s in all_stocks:
             code = s.get("Code", "")
             name = s.get("CompanyName", "")
-            name_en = s.get("CompanyNameEnglish", "")
+            name_en = (s.get("CompanyNameEnglish", "") or "").upper()
             if (
                 query_upper in code
-                or query in name
-                or query_upper in name_en.upper()
+                or query_stripped in name
+                or query_upper in name_en
             ):
-                results.append(s)
-        return results[:50]
+                exact_matches.append(s)
+                continue
+            if fuzzy:
+                score = max(
+                    difflib.SequenceMatcher(None, query_upper, code.upper()).ratio(),
+                    difflib.SequenceMatcher(None, query_stripped, name).ratio(),
+                    difflib.SequenceMatcher(None, query_upper, name_en).ratio() if name_en else 0,
+                )
+                if score >= 0.4:
+                    fuzzy_candidates.append((score, s))
+
+        if exact_matches:
+            return (exact_matches + [s for _, s in sorted(fuzzy_candidates, key=lambda x: -x[0])])[:50]
+        if fuzzy and fuzzy_candidates:
+            return [s for _, s in sorted(fuzzy_candidates, key=lambda x: -x[0])][:50]
+        return exact_matches[:50]
 
     def get_daily_quotes(self, code: str, date_from: str, date_to: str) -> list[dict]:
         """日次株価を取得"""

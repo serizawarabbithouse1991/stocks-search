@@ -14,6 +14,8 @@ from jquants_client import JQuantsClient
 from stock_service import (
     get_stock_data_yfinance,
     get_stock_data_jquants,
+    get_latest_price_yfinance,
+    get_latest_price_jquants,
     normalize_for_comparison,
 )
 
@@ -49,6 +51,7 @@ class StockQuery(BaseModel):
     start: str          # "2025-01-01"
     end: str            # "2026-03-11"
     source: str = "yfinance"  # "yfinance" or "jquants"
+    interval: str = "1d"  # "1m","5m","15m","30m","60m","1h","1d" etc.
 
 
 # --- Endpoints ---
@@ -61,12 +64,13 @@ def root():
 def search_stocks(
     q: str = Query(..., min_length=1, description="銘柄コードまたは銘柄名"),
     source: str = Query("jquants", description="データソース: jquants or yfinance"),
+    fuzzy: bool = Query(True, description="あいまい検索（J-Quants のみ）"),
 ):
     """銘柄検索"""
     if source == "jquants":
         try:
             client = get_jquants()
-            results = client.search_stocks(q)
+            results = client.search_stocks(q, fuzzy=fuzzy)
             return {
                 "source": "jquants",
                 "results": [
@@ -107,6 +111,36 @@ def search_stocks(
             raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/latest")
+def get_latest_prices(
+    tickers: str = Query(..., description="カンマ区切り: 7203.T,AAPL など"),
+    source: str = Query("yfinance", description="yfinance or jquants"),
+):
+    """選択銘柄の直近価格を取得（リアルタイムに近い表示用）。yfinance は数分遅延、J-Quants は日次更新。"""
+    ticker_list = [t.strip() for t in tickers.split(",") if t.strip()]
+    if not ticker_list:
+        return {"prices": []}
+    prices = []
+    if source == "jquants":
+        try:
+            client = get_jquants()
+            for t in ticker_list:
+                code = t.replace(".T", "")
+                row = get_latest_price_jquants(client, code)
+                if row:
+                    prices.append(row)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        for t in ticker_list:
+            row = get_latest_price_yfinance(t)
+            if row:
+                prices.append(row)
+    return {"prices": prices}
+
+
 @app.post("/api/stocks")
 def get_stocks(query: StockQuery):
     """複数銘柄の株価データを取得"""
@@ -120,8 +154,7 @@ def get_stocks(query: StockQuery):
             client = get_jquants()
             data = get_stock_data_jquants(client, code, query.start, query.end)
         else:
-            # yfinanceはティッカーシンボルそのまま
-            data = get_stock_data_yfinance(ticker, query.start, query.end)
+            data = get_stock_data_yfinance(ticker, query.start, query.end, query.interval)
 
         if data:
             results.append(data)
@@ -147,7 +180,7 @@ def export_csv(query: StockQuery):
             client = get_jquants()
             data = get_stock_data_jquants(client, code, query.start, query.end)
         else:
-            data = get_stock_data_yfinance(ticker, query.start, query.end)
+            data = get_stock_data_yfinance(ticker, query.start, query.end, query.interval)
         if data:
             results.append(data)
 
