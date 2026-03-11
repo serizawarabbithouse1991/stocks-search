@@ -155,6 +155,15 @@ function App() {
       const codes = selectedTickers.map((t) => t.code);
       const res: StocksResponse = await fetchStocks(codes, s, e, timeInterval, ac.signal);
       setStocksData(res);
+      if (res.stocks?.length) {
+        setSelectedTickers((prev) =>
+          prev.map((t) => {
+            const sd = res.stocks.find((st) => st.ticker === t.code);
+            if (sd?.name && sd.name !== sd.ticker) return { ...t, name: sd.name };
+            return t;
+          })
+        );
+      }
       if (res.errors?.length) setErrors(res.errors);
     } catch (err: any) {
       if (err.name === "AbortError") {

@@ -7,6 +7,20 @@ from typing import Optional
 
 VALID_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo"}
 
+_name_cache: dict[str, str] = {}
+
+
+def resolve_name(ticker: str) -> str:
+    if ticker in _name_cache:
+        return _name_cache[ticker]
+    try:
+        info = yf.Ticker(ticker).info
+        name = info.get("longName") or info.get("shortName") or ticker
+        _name_cache[ticker] = name
+    except Exception:
+        _name_cache[ticker] = ticker
+    return _name_cache[ticker]
+
 _MAX_PERIOD_DAYS = {
     "1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60,
     "60m": 730, "90m": 60, "1h": 730,
@@ -50,8 +64,10 @@ def get_stock_data_yfinance(
             })
 
         close_vals = df["Close"]
+        name = resolve_name(ticker)
         return {
             "ticker": ticker,
+            "name": name,
             "interval": interval,
             "count": len(records),
             "first_close": round(float(close_vals.iloc[0]), 1),

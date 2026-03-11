@@ -371,10 +371,24 @@ button.danger:hover {
   font-size: 0.8rem;
 }
 
+/* ===== Stats Header ===== */
+.stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.stats-toggle {
+  display: flex;
+  gap: 4px;
+}
+
 /* ===== Stats Grid ===== */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -383,8 +397,62 @@ button.danger:hover {
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px 16px;
   transition: background 0.25s, border-color 0.25s;
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.stat-card-symbol {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.stat-card-name {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.stat-card-change {
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.stat-card-body {
+  /* stats rows container */
+}
+
+.stat-card-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card-chart svg {
+  display: block;
+  border-radius: 4px;
+}
+
+.stat-card-price-row {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.85rem;
 }
 
 .stat-card h3 {

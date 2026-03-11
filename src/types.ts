@@ -9,6 +9,7 @@ export interface StockRecord {
 
 export interface StockData {
   ticker: string;
+  name?: string;
   count: number;
   first_close: number;
   last_close: number;
