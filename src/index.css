@@ -610,6 +610,80 @@ button.danger:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* ===== Signal Badges ===== */
+.signal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.signal-badge-sm {
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  margin-bottom: 0;
+  margin-top: 2px;
+}
+
+.signal-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.signal-strong_buy {
+  background: rgba(63, 185, 80, 0.18);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.35);
+}
+.signal-strong_buy .signal-dot {
+  background: #3fb950;
+  box-shadow: 0 0 6px rgba(63, 185, 80, 0.6);
+}
+
+.signal-buy {
+  background: rgba(63, 185, 80, 0.12);
+  color: #56d364;
+  border: 1px solid rgba(63, 185, 80, 0.25);
+}
+.signal-buy .signal-dot {
+  background: #56d364;
+}
+
+.signal-neutral {
+  background: rgba(139, 148, 158, 0.12);
+  color: var(--text-muted);
+  border: 1px solid rgba(139, 148, 158, 0.25);
+}
+.signal-neutral .signal-dot {
+  background: var(--text-muted);
+}
+
+.signal-sell {
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+.signal-sell .signal-dot {
+  background: #f85149;
+}
+
+.signal-strong_sell {
+  background: rgba(248, 81, 73, 0.18);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.35);
+}
+.signal-strong_sell .signal-dot {
+  background: #f85149;
+  box-shadow: 0 0 6px rgba(248, 81, 73, 0.6);
+}
+
 .stat-card-header {
   display: flex;
   align-items: baseline;

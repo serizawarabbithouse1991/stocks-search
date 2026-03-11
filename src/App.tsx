@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { StocksResponse, SearchResult } from "./types";
 import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, fetchMeta, type LatestPrice, type TickerMeta } from "./api";
+import { calcSignal, type OHLCV, type SignalResult } from "./indicators";
 import { useLocale } from "./i18n";
 import { useAuth } from "./auth/AuthContext";
 import { putSettings, getSettings } from "./auth/api";
@@ -263,6 +264,25 @@ function App() {
     tickerNames[t.code] = t.name;
   });
 
+  const tickerSignals = useMemo<Record<string, SignalResult>>(() => {
+    const m: Record<string, SignalResult> = {};
+    if (!stocksData?.stocks) return m;
+    for (const s of stocksData.stocks) {
+      if (s.data?.length) {
+        const ohlcv: OHLCV[] = s.data.map((r) => ({
+          date: r.date,
+          open: Number(r.open) || 0,
+          high: Number(r.high) || 0,
+          low: Number(r.low) || 0,
+          close: Number(r.close) || 0,
+          volume: Number(r.volume) || 0,
+        }));
+        m[s.ticker] = calcSignal(ohlcv);
+      }
+    }
+    return m;
+  }, [stocksData]);
+
   return (
     <>
       <header className="app-header">
@@ -405,17 +425,26 @@ function App() {
           <div className="latest-prices">
             <h3>{t("latest.title")}</h3>
             <div className="latest-prices-grid">
-              {latestPrices.map((p) => (
-                <div key={p.ticker} className="latest-price-card">
-                  <span className="lp-name">{tickerNames[p.ticker] || tickerNames[p.ticker + ".T"] || p.ticker}</span>
-                  <span className="lp-price">{p.price.toLocaleString()}</span>
-                  {p.change_pct != null && (
-                    <span className={`lp-change ${p.change_pct >= 0 ? "positive" : "negative"}`}>
-                      {p.change_pct >= 0 ? "+" : ""}{p.change_pct}%
-                    </span>
-                  )}
-                </div>
-              ))}
+              {latestPrices.map((p) => {
+                const sig = tickerSignals[p.ticker];
+                return (
+                  <div key={p.ticker} className="latest-price-card">
+                    <span className="lp-name">{tickerNames[p.ticker] || tickerNames[p.ticker + ".T"] || p.ticker}</span>
+                    <span className="lp-price">{p.price.toLocaleString()}</span>
+                    {p.change_pct != null && (
+                      <span className={`lp-change ${p.change_pct >= 0 ? "positive" : "negative"}`}>
+                        {p.change_pct >= 0 ? "+" : ""}{p.change_pct}%
+                      </span>
+                    )}
+                    {sig && sig.level !== "neutral" && (
+                      <span className={`signal-badge signal-badge-sm signal-${sig.level}`}>
+                        <span className="signal-dot" />
+                        {sig.label}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <p className="latest-prices-note">
               {t("latest.note")}

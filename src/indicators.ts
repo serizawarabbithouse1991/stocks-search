@@ -109,6 +109,75 @@ export function calcMACD(closes: number[]): {
   return { macd, signal, histogram };
 }
 
+/**
+ * 複合テクニカルシグナル判定
+ * RSI / MACD / SMA クロスの複合スコアから買い・売り優勢を判定する。
+ *
+ * スコア配分（最大 ±8）:
+ *   RSI(14)         : <30 → +2 / <40 → +1 / >60 → -1 / >70 → -2
+ *   MACD ヒストグラム: >0 → +1 / <0 → -1
+ *   MACD クロス方向  : 直近シグナル上抜け +1 / 下抜け -1
+ *   価格 vs SMA(20) : 上 +1 / 下 -1
+ *   価格 vs SMA(50) : 上 +1 / 下 -1
+ *
+ * 戻り値: { score, label, level }
+ *   level: "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell"
+ */
+export interface SignalResult {
+  score: number;
+  label: string;
+  level: "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell";
+}
+
+export function calcSignal(rows: OHLCV[]): SignalResult {
+  const neutral: SignalResult = { score: 0, label: "中立", level: "neutral" };
+  if (!rows?.length || rows.length < 26) return neutral;
+
+  const closes = rows.map((r) => Number(r.close) || 0);
+  const last = closes[closes.length - 1];
+  if (last <= 0) return neutral;
+
+  let score = 0;
+
+  const rsi = calcRSI(closes, 14);
+  const lastRsi = rsi[rsi.length - 1];
+  if (lastRsi != null) {
+    if (lastRsi < 30) score += 2;
+    else if (lastRsi < 40) score += 1;
+    else if (lastRsi > 70) score -= 2;
+    else if (lastRsi > 60) score -= 1;
+  }
+
+  const { histogram } = calcMACD(closes);
+  const lastHist = histogram[histogram.length - 1];
+  const prevHist = histogram[histogram.length - 2];
+  if (lastHist != null) {
+    score += lastHist > 0 ? 1 : -1;
+  }
+  if (lastHist != null && prevHist != null) {
+    if (prevHist <= 0 && lastHist > 0) score += 1;
+    else if (prevHist >= 0 && lastHist < 0) score -= 1;
+  }
+
+  const sma20 = calcSMA(closes, 20);
+  const lastSma20 = sma20[sma20.length - 1];
+  if (lastSma20 != null) {
+    score += last > lastSma20 ? 1 : -1;
+  }
+
+  const sma50 = calcSMA(closes, 50);
+  const lastSma50 = sma50[sma50.length - 1];
+  if (lastSma50 != null) {
+    score += last > lastSma50 ? 1 : -1;
+  }
+
+  if (score >= 4) return { score, label: "強い買い", level: "strong_buy" };
+  if (score >= 2) return { score, label: "買い優勢", level: "buy" };
+  if (score <= -4) return { score, label: "強い売り", level: "strong_sell" };
+  if (score <= -2) return { score, label: "売り優勢", level: "sell" };
+  return { score, label: "中立", level: "neutral" };
+}
+
 export function addIndicators(rows: OHLCV[]): {
   date: string;
   close: number;

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import type { StockData } from "../types";
+import { calcSignal, type SignalResult, type OHLCV } from "../indicators";
 
 interface Props {
   stocks: StockData[];
@@ -58,6 +59,24 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
     return m;
   }, [stocks]);
 
+  const signals = useMemo(() => {
+    const m: Record<string, SignalResult> = {};
+    for (const s of stocks) {
+      if (s.data?.length) {
+        const ohlcv: OHLCV[] = s.data.map((r) => ({
+          date: r.date,
+          open: Number(r.open) || 0,
+          high: Number(r.high) || 0,
+          low: Number(r.low) || 0,
+          close: Number(r.close) || 0,
+          volume: Number(r.volume) || 0,
+        }));
+        m[s.ticker] = calcSignal(ohlcv);
+      }
+    }
+    return m;
+  }, [stocks]);
+
   if (!stocks?.length) return null;
 
   return (
@@ -84,6 +103,7 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
         {stocks.map((s) => {
           const name = displayName(s.ticker, s.name, tickerNames);
           const symbolCode = s.ticker;
+          const sig = signals[s.ticker];
           return (
             <div key={s.ticker} className="stat-card">
               <div className="stat-card-header">
@@ -93,6 +113,12 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
                   {s.change_pct >= 0 ? "+" : ""}{s.change_pct}%
                 </span>
               </div>
+              {sig && (
+                <div className={`signal-badge signal-${sig.level}`} title={`スコア: ${sig.score}`}>
+                  <span className="signal-dot" />
+                  {sig.label}
+                </div>
+              )}
 
               {viewMode === "stats" ? (
                 <div className="stat-card-body">
