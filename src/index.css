@@ -780,4 +780,219 @@ td:first-child, th:first-child {
   .stat-row {
     font-size: 0.8rem;
   }
+
+  .wl-actions {
+    flex-direction: column;
+  }
+
+  .wl-item-top {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wl-item-btns {
+    justify-content: flex-start;
+  }
+}
+
+/* ===== Watchlist Panel ===== */
+.wl-panel {
+  padding: 16px 20px;
+}
+
+.wl-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+}
+
+.wl-arrow {
+  font-size: 0.85rem;
+  width: 16px;
+  display: inline-block;
+  color: var(--text-muted);
+}
+
+.wl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.wl-body {
+  margin-top: 12px;
+}
+
+.wl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wl-file-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  background: var(--btn-secondary-bg);
+  border: 1px solid var(--btn-secondary-border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.wl-file-btn:hover {
+  background: var(--btn-secondary-hover);
+  border-color: var(--toolbar-btn-hover-border);
+}
+
+.wl-save-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wl-save-row input {
+  flex: 1;
+  min-width: 160px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.wl-save-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.wl-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 12px 0;
+  line-height: 1.6;
+}
+
+.wl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wl-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.wl-item:hover {
+  border-color: var(--toolbar-btn-hover-border);
+}
+
+.wl-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wl-item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wl-item-expand {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.wl-item-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wl-item-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wl-rename-input {
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  width: 140px;
+}
+
+.wl-item-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.wl-item-btns button {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 5px;
+}
+
+.wl-item-tickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.wl-ticker-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.wl-ticker-name {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }

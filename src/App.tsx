@@ -6,6 +6,7 @@ import StockChart from "./components/StockChart";
 import StockTable from "./components/StockTable";
 import StatsCards from "./components/StatsCards";
 import IndividualCharts from "./components/IndividualCharts";
+import WatchlistPanel from "./components/WatchlistPanel";
 
 const SUGGEST_DEBOUNCE_MS = 300;
 
@@ -293,6 +294,13 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* ウォッチリスト */}
+      <WatchlistPanel
+        currentTickers={selectedTickers}
+        source={source}
+        onLoad={(tickers) => setSelectedTickers(tickers)}
+      />
 
       {/* エラー表示 */}
       {errors.length > 0 && (
