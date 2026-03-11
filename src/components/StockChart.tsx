@@ -80,44 +80,59 @@ export default function StockChart({
     [comparison]
   );
   const singleTicker = tickers.length === 1 ? tickers[0] : null;
-  const canShowPrice = singleTicker != null;
   const canShowVolume = singleTicker != null && stocks.length > 0 && stocks[0].data?.length > 0;
 
-  // 実価格表示用: 1銘柄の data + 指標（VWAP, SMA, RSI, MACD）
-  const priceChartData = useMemo(() => {
-    if (!canShowPrice || !stocks[0] || !stocks[0].data?.length) return [];
-    const raw = stocks[0].data;
-    const rows = raw.map((r) => ({
-      date: String(r.date ?? ""),
-      open: Number(r.open) || 0,
-      high: Number(r.high) || 0,
-      low: Number(r.low) || 0,
-      close: Number(r.close) || 0,
-      volume: Number(r.volume) || 0,
-    })).filter((r) => r.close > 0);
-    if (rows.length === 0) return [];
-    try {
-      const withIndicators = addIndicators(rows);
-      return withIndicators.map((row) => ({
-        ...row,
-        [singleTicker!]: row.close,
-      }));
-    } catch {
-      return rows.map((r) => ({
-        date: r.date,
-        close: r.close,
-        volume: r.volume,
-        [singleTicker!]: r.close,
-        vwap: (r.high + r.low + r.close) / 3,
-        sma20: null as number | null,
-        sma50: null as number | null,
-        rsi: null as number | null,
-        macd: null as number | null,
-        macdSignal: null as number | null,
-        macdHistogram: null as number | null,
-      }));
+  // 絶対値表示用（複数銘柄対応）: 各銘柄の実終値を date をキーに結合
+  const absoluteChartData = useMemo(() => {
+    if (!stocks?.length) return [];
+    if (singleTicker && stocks[0]?.data?.length) {
+      const raw = stocks[0].data;
+      const rows = raw.map((r) => ({
+        date: String(r.date ?? ""),
+        open: Number(r.open) || 0,
+        high: Number(r.high) || 0,
+        low: Number(r.low) || 0,
+        close: Number(r.close) || 0,
+        volume: Number(r.volume) || 0,
+      })).filter((r) => r.close > 0);
+      if (rows.length === 0) return [];
+      try {
+        const withIndicators = addIndicators(rows);
+        return withIndicators.map((row) => ({
+          ...row,
+          [singleTicker]: row.close,
+        }));
+      } catch {
+        return rows.map((r) => ({
+          date: r.date,
+          close: r.close,
+          volume: r.volume,
+          [singleTicker]: r.close,
+          vwap: (r.high + r.low + r.close) / 3,
+          sma20: null as number | null,
+          sma50: null as number | null,
+          rsi: null as number | null,
+          macd: null as number | null,
+          macdSignal: null as number | null,
+          macdHistogram: null as number | null,
+        }));
+      }
     }
-  }, [canShowPrice, singleTicker, stocks]);
+    const dateMap = new Map<string, Record<string, number | string>>();
+    for (const sd of stocks) {
+      if (!sd.data?.length) continue;
+      for (const r of sd.data) {
+        const d = String(r.date ?? "");
+        if (!dateMap.has(d)) dateMap.set(d, { date: d });
+        const entry = dateMap.get(d)!;
+        const close = Number(r.close) || 0;
+        if (close > 0) entry[sd.ticker] = close;
+      }
+    }
+    return Array.from(dateMap.values()).sort((a, b) =>
+      (a.date as string).localeCompare(b.date as string)
+    );
+  }, [stocks, singleTicker]);
 
   // 比較（基準100）モードでも SMA を重ねられるようにする
   const comparisonWithSMA = useMemo(() => {
@@ -151,9 +166,9 @@ export default function StockChart({
     return enriched;
   }, [comparison, stocks, showSMA20, showSMA50, showSMA75, showSMA200]);
 
-  const chartData = yAxisMode === "price" && canShowPrice ? priceChartData : comparisonWithSMA;
-  const hasIndicators = canShowPrice && yAxisMode === "price" && priceChartData.length > 0;
-  const hasComparisonSMA = !canShowPrice && (showSMA20 || showSMA50 || showSMA75 || showSMA200) && stocks.length > 0;
+  const chartData = yAxisMode === "price" ? absoluteChartData : comparisonWithSMA;
+  const hasIndicators = singleTicker != null && yAxisMode === "price" && absoluteChartData.length > 0;
+  const hasComparisonSMA = yAxisMode === "normalized" && (showSMA20 || showSMA50 || showSMA75 || showSMA200) && stocks.length > 0;
   const step = Math.max(1, Math.floor((chartData?.length ?? 0) / 20));
   const presets = getPeriodPresets();
 
@@ -167,7 +182,7 @@ export default function StockChart({
     if (name === "volume") return value.toLocaleString();
     if (name === "rsi" || name === "RSI") return value.toFixed(1);
     if (name === "macd" || name === "macdSignal" || name === "macdHistogram") return value.toFixed(3);
-    if (yAxisMode === "price") return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    if (yAxisMode === "price") return `\u00a5${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
     return value.toFixed(1);
   };
 
@@ -340,7 +355,7 @@ export default function StockChart({
     );
   };
 
-  const stepSub = Math.max(1, Math.floor(priceChartData.length / 15));
+  const stepSub = Math.max(1, Math.floor(absoluteChartData.length / 15));
 
   return (
     <div className="chart-wrapper">
@@ -360,7 +375,7 @@ export default function StockChart({
         </div>
         <div className="chart-toolbar-group">
           <span className="chart-toolbar-label">チャート</span>
-          {(["line", "area", "smooth", ...(canShowPrice ? ["candle" as const] : [])] as ChartType[]).map((t) => (
+          {(["line", "area", "smooth", ...(singleTicker ? ["candle" as const] : [])] as ChartType[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -378,17 +393,15 @@ export default function StockChart({
             className={`chart-toolbar-btn ${yAxisMode === "normalized" ? "active" : ""}`}
             onClick={() => setYAxisMode("normalized")}
           >
-            基準100
+            指数(基準100)
           </button>
-          {canShowPrice && (
-            <button
-              type="button"
-              className={`chart-toolbar-btn ${yAxisMode === "price" ? "active" : ""}`}
-              onClick={() => setYAxisMode("price")}
-            >
-              実価格
-            </button>
-          )}
+          <button
+            type="button"
+            className={`chart-toolbar-btn ${yAxisMode === "price" ? "active" : ""}`}
+            onClick={() => setYAxisMode("price")}
+          >
+            絶対値
+          </button>
         </div>
         {canShowVolume && (
           <div className="chart-toolbar-group">
@@ -460,7 +473,7 @@ export default function StockChart({
           </div>
         )}
       </div>
-      {chartType === "candle" && canShowPrice && stocks[0] ? (
+      {chartType === "candle" && singleTicker && stocks[0] ? (
         <CandlestickChart
           stock={stocks[0]}
           tickerName={tickerNames[singleTicker!] || singleTicker!}
@@ -476,7 +489,7 @@ export default function StockChart({
         <div className="chart-subpanel">
           <div className="chart-subpanel-title">RSI(14)</div>
           <ResponsiveContainer width="100%" height={120}>
-            <LineChart data={priceChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
+            <LineChart data={absoluteChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="date" tick={{ fill: cc.text, fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} hide />
               <YAxis domain={[0, 100]} tick={{ fill: cc.text, fontSize: 10 }} width={32} />
@@ -496,7 +509,7 @@ export default function StockChart({
         <div className="chart-subpanel">
           <div className="chart-subpanel-title">MACD(12,26,9)</div>
           <ResponsiveContainer width="100%" height={120}>
-            <ComposedChart data={priceChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
+            <ComposedChart data={absoluteChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="date" tick={{ fill: cc.text, fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} />
               <YAxis tick={{ fill: cc.text, fontSize: 10 }} width={48} />
@@ -506,7 +519,7 @@ export default function StockChart({
                 labelFormatter={(l) => l}
               />
               <Bar dataKey="macdHistogram" radius={[1, 1, 0, 0]} maxBarSize={4} isAnimationActive={false}>
-                {priceChartData.map((entry, i) => (
+                {absoluteChartData.map((entry: any, i: number) => (
                   <Cell
                     key={i}
                     fill={
