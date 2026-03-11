@@ -38,4 +38,10 @@ export interface SearchResult {
   name_en: string;
   sector: string;
   market: string;
+  sector33?: string;
+  sector33_code?: string;
+  sector17?: string;
+  sector17_code?: string;
+  scale?: string;
+  scale_code?: string;
 }

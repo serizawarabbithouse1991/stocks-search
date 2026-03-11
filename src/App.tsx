@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { StocksResponse, SearchResult } from "./types";
-import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, type LatestPrice } from "./api";
+import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, fetchMeta, type LatestPrice, type TickerMeta } from "./api";
 import { useLocale } from "./i18n";
 import { useAuth } from "./auth/AuthContext";
 import { putSettings, getSettings } from "./auth/api";
@@ -44,6 +44,8 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tickerMeta, setTickerMeta] = useState<Record<string, TickerMeta>>({});
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -140,6 +142,21 @@ function App() {
     if (!selectedTickers.find((t) => t.code === tickerCode)) {
       setSelectedTickers([...selectedTickers, { code: tickerCode, name: result.name }]);
     }
+    if (result.sector33 || result.sector17 || result.scale || result.market) {
+      setTickerMeta((prev) => ({
+        ...prev,
+        [tickerCode]: {
+          name: result.name,
+          market: result.market || "",
+          sector33: result.sector33 || result.sector || "",
+          sector33_code: result.sector33_code || "",
+          sector17: result.sector17 || "",
+          sector17_code: result.sector17_code || "",
+          scale: result.scale || "",
+          scale_code: result.scale_code || "",
+        },
+      }));
+    }
     setShowResults(false);
     setQuery("");
     setHighlightIndex(-1);
@@ -227,6 +244,20 @@ function App() {
     };
   }, [selectedTickers, token]);
 
+  useEffect(() => {
+    const missing = selectedTickers
+      .map((t) => t.code)
+      .filter((c) => !tickerMeta[c]);
+    if (missing.length === 0) return;
+    fetchMeta(missing)
+      .then((data) => {
+        if (Object.keys(data).length > 0) {
+          setTickerMeta((prev) => ({ ...prev, ...data }));
+        }
+      })
+      .catch(() => {});
+  }, [selectedTickers]);
+
   const tickerNames: Record<string, string> = {};
   selectedTickers.forEach((t) => {
     tickerNames[t.code] = t.name;
@@ -297,6 +328,7 @@ function App() {
                 <span className="name">{r.name}</span>
                 {r.sector && <span className="sector">{r.sector}</span>}
                 {r.market && <span className="market">{r.market}</span>}
+                {r.scale && <span className="scale">{r.scale}</span>}
               </div>
             ))}
           </div>
@@ -307,19 +339,62 @@ function App() {
           </div>
         )}
 
+        {/* メタデータタグフィルター */}
+        {selectedTickers.length > 0 && (() => {
+          const allTags = new Set<string>();
+          selectedTickers.forEach((tk) => {
+            const m = tickerMeta[tk.code];
+            if (m?.sector33) allTags.add(m.sector33);
+            if (m?.market) allTags.add(m.market);
+            if (m?.scale) allTags.add(m.scale);
+          });
+          return allTags.size > 0 ? (
+            <div className="meta-filter-bar">
+              <button
+                className={`meta-filter-chip ${activeFilter === null ? "active" : ""}`}
+                onClick={() => setActiveFilter(null)}
+              >{t("search.all") || "すべて"}</button>
+              {Array.from(allTags).sort().map((tag) => (
+                <button
+                  key={tag}
+                  className={`meta-filter-chip ${activeFilter === tag ? "active" : ""}`}
+                  onClick={() => setActiveFilter(activeFilter === tag ? null : tag)}
+                >{tag}</button>
+              ))}
+            </div>
+          ) : null;
+        })()}
+
         {/* 選択中の銘柄タグ */}
         {selectedTickers.length > 0 && (
           <div className="tags">
-            {selectedTickers.map((t) => (
-              <span key={t.code} className="tag">
-                {t.code} {t.name}
-                <button onClick={() => removeTicker(t.code)}>&times;</button>
-              </span>
-            ))}
+            {selectedTickers
+              .filter((tk) => {
+                if (!activeFilter) return true;
+                const m = tickerMeta[tk.code];
+                if (!m) return true;
+                return m.sector33 === activeFilter || m.market === activeFilter || m.scale === activeFilter;
+              })
+              .map((tk) => {
+                const m = tickerMeta[tk.code];
+                return (
+                  <span key={tk.code} className="tag tag-with-meta">
+                    <span className="tag-main">{tk.code} {tk.name}</span>
+                    {m && (
+                      <span className="tag-badges">
+                        {m.sector33 && <span className="tag-badge badge-sector">{m.sector33}</span>}
+                        {m.market && <span className="tag-badge badge-market">{m.market}</span>}
+                        {m.scale && <span className="tag-badge badge-scale">{m.scale}</span>}
+                      </span>
+                    )}
+                    <button onClick={() => removeTicker(tk.code)}>&times;</button>
+                  </span>
+                );
+              })}
             <button
               className="danger"
               style={{ padding: "4px 12px", fontSize: "0.82rem" }}
-              onClick={() => { setSelectedTickers([]); setStocksData(null); }}
+              onClick={() => { setSelectedTickers([]); setStocksData(null); setActiveFilter(null); }}
             >
               {t("search.deleteAll")}
             </button>

@@ -10,6 +10,7 @@ const en: Record<string, string> = {
   "search.button": "Search",
   "search.noResults": "No matching stocks found (fuzzy search tolerates typos)",
   "search.deleteAll": "Delete all",
+  "search.all": "All",
 
   // Latest prices
   "latest.title": "Latest Prices",

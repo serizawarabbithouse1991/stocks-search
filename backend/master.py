@@ -20,6 +20,17 @@ _code_index: dict[str, dict] = {}
 _loaded_at: Optional[str] = None
 
 
+def _cell_str(ws, row: int, col: int | None) -> str:
+    if col is None:
+        return ""
+    val = ws.cell_value(row, col)
+    if isinstance(val, float):
+        if val == int(val):
+            return str(int(val))
+        return str(val)
+    return str(val).strip()
+
+
 def _read_xls(path: str | Path) -> list[dict]:
     wb = xlrd.open_workbook(str(path))
     ws = wb.sheet_by_index(0)
@@ -37,18 +48,24 @@ def _read_xls(path: str | Path) -> list[dict]:
             continue
 
         name = str(ws.cell_value(r, col_map["銘柄名"])).strip()
-        market = str(ws.cell_value(r, col_map["市場・商品区分"])).strip()
-        sector33 = str(ws.cell_value(r, col_map.get("33業種区分", ""))).strip() if "33業種区分" in col_map else ""
-        sector17 = str(ws.cell_value(r, col_map.get("17業種区分", ""))).strip() if "17業種区分" in col_map else ""
-        scale = str(ws.cell_value(r, col_map.get("規模区分", ""))).strip() if "規模区分" in col_map else ""
+        market = str(ws.cell_value(r, col_map.get("市場・商品区分", ""))).strip() if "市場・商品区分" in col_map else ""
+        sector33_code = _cell_str(ws, r, col_map.get("33業種コード"))
+        sector33 = _cell_str(ws, r, col_map.get("33業種区分"))
+        sector17_code = _cell_str(ws, r, col_map.get("17業種コード"))
+        sector17 = _cell_str(ws, r, col_map.get("17業種区分"))
+        scale_code = _cell_str(ws, r, col_map.get("規模コード"))
+        scale = _cell_str(ws, r, col_map.get("規模区分"))
 
         rows.append({
             "code": code,
             "code_t": f"{code}.T",
             "name": name,
             "market": market,
+            "sector33_code": sector33_code,
             "sector33": sector33,
+            "sector17_code": sector17_code,
             "sector17": sector17,
+            "scale_code": scale_code,
             "scale": scale,
         })
 

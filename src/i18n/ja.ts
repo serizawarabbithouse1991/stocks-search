@@ -10,6 +10,7 @@ const ja: Record<string, string> = {
   "search.button": "検索",
   "search.noResults": "該当する銘柄が見つかりません（あいまい検索で typo も許容しています）",
   "search.deleteAll": "全て削除",
+  "search.all": "すべて",
 
   // Latest prices
   "latest.title": "直近価格",

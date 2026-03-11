@@ -43,6 +43,27 @@ export async function fetchLatestPrices(
   return res.json();
 }
 
+export interface TickerMeta {
+  name: string;
+  market: string;
+  sector33: string;
+  sector33_code: string;
+  sector17: string;
+  sector17_code: string;
+  scale: string;
+  scale_code: string;
+}
+
+export async function fetchMeta(
+  tickers: string[]
+): Promise<Record<string, TickerMeta>> {
+  if (tickers.length === 0) return {};
+  const params = new URLSearchParams({ tickers: tickers.join(",") });
+  const res = await fetch(`${API_BASE}/api/master/meta?${params}`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
 export async function exportCsv(tickers: string[], start: string, end: string) {
   const res = await fetch(`${API_BASE}/api/export/csv`, {
     method: "POST",

@@ -75,6 +75,12 @@ def search_stocks(
                     "name_en": "",
                     "sector": h["sector33"],
                     "market": h["market"],
+                    "sector33": h["sector33"],
+                    "sector33_code": h.get("sector33_code", ""),
+                    "sector17": h.get("sector17", ""),
+                    "sector17_code": h.get("sector17_code", ""),
+                    "scale": h.get("scale", ""),
+                    "scale_code": h.get("scale_code", ""),
                 }
                 for h in master_hits
             ]
@@ -187,6 +193,29 @@ def master_status():
     return master.status()
 
 
+@app.get("/api/master/meta")
+def master_meta(
+    tickers: str = Query(..., description="カンマ区切りティッカー"),
+):
+    """複数ティッカーのマスタメタデータを一括返却"""
+    ticker_list = [t.strip() for t in tickers.split(",") if t.strip()]
+    result = {}
+    for t in ticker_list:
+        entry = master.get_entry(t)
+        if entry:
+            result[t] = {
+                "name": entry["name"],
+                "market": entry["market"],
+                "sector33": entry["sector33"],
+                "sector33_code": entry.get("sector33_code", ""),
+                "sector17": entry.get("sector17", ""),
+                "sector17_code": entry.get("sector17_code", ""),
+                "scale": entry.get("scale", ""),
+                "scale_code": entry.get("scale_code", ""),
+            }
+    return result
+
+
 @app.post("/api/master/reload")
 def master_reload(path: Optional[str] = None):
     """銘柄マスタを再読み込みする"""
@@ -202,3 +231,4 @@ def master_reload(path: Optional[str] = None):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
