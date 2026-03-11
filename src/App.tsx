@@ -2,20 +2,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { StocksResponse, SearchResult } from "./types";
 import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, type LatestPrice } from "./api";
 
-import { useTheme } from "./ThemeContext";
 import StockChart from "./components/StockChart";
 import StockTable from "./components/StockTable";
 import StatsCards from "./components/StatsCards";
 import IndividualCharts from "./components/IndividualCharts";
 import WatchlistPanel from "./components/WatchlistPanel";
 import LegalModal, { PrivacyPolicy, TermsOfService } from "./components/LegalModal";
+import SettingsPanel from "./components/SettingsPanel";
 
 const SUGGEST_DEBOUNCE_MS = 300;
 
 type Tab = "chart" | "individual" | "table";
 
 function App() {
-  const { theme, toggle: toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [selectedTickers, setSelectedTickers] = useState<{ code: string; name: string }[]>([]);
   const [startDate, setStartDate] = useState("2025-01-01");
@@ -36,6 +35,7 @@ function App() {
   const fetchAbortRef = useRef<AbortController | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -201,15 +201,27 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <h1>StocksView</h1>
+        <div className="header-left">
+          <h1>StocksView</h1>
+          <span className="header-subtitle">株式銘柄比較・分析</span>
+        </div>
         <button
-          className="theme-toggle"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "ライトモードに切替" : "ダークモードに切替"}
+          className="hamburger-btn"
+          onClick={() => setSettingsOpen(true)}
+          title="設定メニュー"
+          aria-label="設定メニューを開く"
         >
-          {theme === "dark" ? "\u2600" : "\u263E"}
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
         </button>
       </header>
+
+      <SettingsPanel
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenLegal={(type) => setLegalModal(type)}
+      />
 
       {/* 検索パネル */}
       <div className="panel">
@@ -403,9 +415,9 @@ function App() {
       {/* フッター */}
       <footer className="app-footer">
         <span>&copy; {new Date().getFullYear()} StocksView</span>
-        <span className="footer-sep">|</span>
+        <span className="footer-sep">&middot;</span>
         <button className="footer-link" onClick={() => setLegalModal("terms")}>利用規約</button>
-        <span className="footer-sep">|</span>
+        <span className="footer-sep">&middot;</span>
         <button className="footer-link" onClick={() => setLegalModal("privacy")}>プライバシーポリシー</button>
       </footer>
 
