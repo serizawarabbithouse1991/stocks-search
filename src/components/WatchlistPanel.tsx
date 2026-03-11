@@ -14,7 +14,6 @@ interface Watchlist {
 
 interface Props {
   currentTickers: Ticker[];
-  source: string;
   onLoad: (tickers: Ticker[]) => void;
 }
 
@@ -41,7 +40,7 @@ function persistWatchlists(lists: Watchlist[]) {
  *   - カンマ区切り / 改行区切り
  *   - ###DIFFUSION ヘッダ行は無視
  */
-function parseTxt(text: string, source: string): Ticker[] {
+function parseTxt(text: string): Ticker[] {
   const seen = new Set<string>();
   const result: Ticker[] = [];
 
@@ -58,7 +57,7 @@ function parseTxt(text: string, source: string): Ticker[] {
       if (!part) continue;
 
       let code = part;
-      if (source === "jquants" && /^\d{4}$/.test(code)) {
+      if (/^\d{4}$/.test(code)) {
         code = `${code}.T`;
       }
 
@@ -88,7 +87,7 @@ function exportAsTxt(tickers: Ticker[], listName?: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function WatchlistPanel({ currentTickers, source, onLoad }: Props) {
+export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
   const [watchlists, setWatchlists] = useState<Watchlist[]>(loadWatchlists);
   const [isOpen, setIsOpen] = useState(true);
   const [saveName, setSaveName] = useState("");
@@ -146,7 +145,7 @@ export default function WatchlistPanel({ currentTickers, source, onLoad }: Props
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
-      const tickers = parseTxt(text, source);
+      const tickers = parseTxt(text);
       if (tickers.length > 0) {
         onLoad(tickers);
       }
@@ -162,7 +161,7 @@ export default function WatchlistPanel({ currentTickers, source, onLoad }: Props
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
-      const tickers = parseTxt(text, source);
+      const tickers = parseTxt(text);
       if (tickers.length > 0) {
         const name = file.name.replace(/\.[^.]+$/, "") || "インポート";
         const w: Watchlist = {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { StocksResponse, SearchResult } from "./types";
 import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, type LatestPrice } from "./api";
+
 import { useTheme } from "./ThemeContext";
 import StockChart from "./components/StockChart";
 import StockTable from "./components/StockTable";
@@ -15,7 +16,6 @@ type Tab = "chart" | "individual" | "table";
 function App() {
   const { theme, toggle: toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<"yfinance" | "jquants">("jquants");
   const [selectedTickers, setSelectedTickers] = useState<{ code: string; name: string }[]>([]);
   const [startDate, setStartDate] = useState("2025-01-01");
   const [endDate, setEndDate] = useState("2026-03-11");
@@ -43,7 +43,7 @@ function App() {
       setSearching(true);
       setErrors([]);
       try {
-        const res = await searchStocks(q, source, true);
+        const res = await searchStocks(q, true);
         setSearchResults(res.results || []);
         setShowResults(true);
         setHighlightIndex(-1);
@@ -54,7 +54,7 @@ function App() {
         setSearching(false);
       }
     },
-    [source]
+    []
   );
 
   useEffect(() => {
@@ -80,17 +80,17 @@ function App() {
       }
       return;
     }
-    const fetch = () => {
-      fetchLatestPrices(tickers, source)
+    const fetchPrices = () => {
+      fetchLatestPrices(tickers)
         .then((r) => setLatestPrices(r.prices))
         .catch(() => setLatestPrices([]));
     };
-    fetch();
-    latestPollRef.current = setInterval(fetch, 60 * 1000);
+    fetchPrices();
+    latestPollRef.current = setInterval(fetchPrices, 60 * 1000);
     return () => {
       if (latestPollRef.current) clearInterval(latestPollRef.current);
     };
-  }, [selectedTickers, source]);
+  }, [selectedTickers]);
 
   const handleSearch = () => runSearch(query);
 
@@ -120,7 +120,7 @@ function App() {
   };
 
   const addTicker = (result: SearchResult) => {
-    const tickerCode = source === "yfinance" ? result.code : `${result.code}.T`;
+    const tickerCode = result.code;
     if (!selectedTickers.find((t) => t.code === tickerCode)) {
       setSelectedTickers([...selectedTickers, { code: tickerCode, name: result.name }]);
     }
@@ -144,7 +144,7 @@ function App() {
     setErrors([]);
     try {
       const codes = selectedTickers.map((t) => t.code);
-      const res: StocksResponse = await fetchStocks(codes, s, e, source, timeInterval);
+      const res: StocksResponse = await fetchStocks(codes, s, e, timeInterval);
       setStocksData(res);
       if (res.errors?.length) setErrors(res.errors);
     } catch (err: any) {
@@ -160,7 +160,7 @@ function App() {
 
   const handleExport = async () => {
     const codes = selectedTickers.map((t) => t.code);
-    await exportCsv(codes, startDate, endDate, source);
+    await exportCsv(codes, startDate, endDate);
   };
 
   const tickerNames: Record<string, string> = {};
@@ -185,13 +185,9 @@ function App() {
       <div className="panel">
         <h2>銘柄検索</h2>
         <div className="search-bar">
-          <select value={source} onChange={(e) => setSource(e.target.value as any)}>
-            <option value="jquants">J-Quants (日本株)</option>
-            <option value="yfinance">Yahoo Finance (日米株)</option>
-          </select>
           <input
             type="text"
-            placeholder="銘柄コードまたは銘柄名を入力..."
+            placeholder="銘柄コード（例: 7203.T, AAPL）を入力..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -254,7 +250,7 @@ function App() {
               ))}
             </div>
             <p className="latest-prices-note">
-              {source === "yfinance" ? "Yahoo Finance（数分遅延）" : "J-Quants（日次）"} · 60秒ごと自動更新
+              Yahoo Finance（数分遅延） · 60秒ごと自動更新
             </p>
           </div>
         )}
@@ -298,7 +294,6 @@ function App() {
       {/* ウォッチリスト */}
       <WatchlistPanel
         currentTickers={selectedTickers}
-        source={source}
         onLoad={(tickers) => setSelectedTickers(tickers)}
       />
 

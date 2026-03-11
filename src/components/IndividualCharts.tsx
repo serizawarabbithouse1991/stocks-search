@@ -136,7 +136,7 @@ function SingleStockChart({
             interval={step}
           />
           <YAxis yAxisId="price" tick={{ fill: cc.text, fontSize: 10 }} domain={["auto", "auto"]} />
-          {flags.volume && <YAxis yAxisId="vol" orientation="right" hide />}
+          {flags.volume && <YAxis yAxisId="vol" orientation="right" hide domain={[0, (dataMax: number) => dataMax * 4]} />}
           <Tooltip
             contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 12 }}
             labelStyle={{ color: cc.text }}
@@ -173,7 +173,7 @@ function SingleStockChart({
             <Line yAxisId="price" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="sma200" />
           )}
           {flags.volume && (
-            <Bar yAxisId="vol" dataKey="volume" fill={cc.volumeFill} radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
+            <Bar yAxisId="vol" dataKey="volume" fill={cc.volumeFill} opacity={0.35} radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
           )}
           <Legend
             formatter={(v: string) =>

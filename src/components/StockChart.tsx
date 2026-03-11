@@ -189,7 +189,7 @@ export default function StockChart({
           domain={["auto", "auto"]}
         />
         {showVolumeBar && (
-          <YAxis yAxisId="volume" orientation="right" hide tick={{ fill: cc.text }} />
+          <YAxis yAxisId="volume" orientation="right" hide tick={{ fill: cc.text }} domain={[0, (dataMax: number) => dataMax * 4]} />
         )}
         <Tooltip
           contentStyle={{
@@ -330,6 +330,7 @@ export default function StockChart({
             yAxisId="volume"
             dataKey="volume"
             fill={cc.volumeFill}
+            opacity={0.35}
             radius={[2, 2, 0, 0]}
             maxBarSize={24}
             isAnimationActive={false}
