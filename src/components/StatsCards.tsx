@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { StockData } from "../types";
-import { calcSignal, type SignalResult, type OHLCV } from "../indicators";
+import { calcSignal, calcSMA, calcRSI, type SignalResult, type OHLCV } from "../indicators";
 
 interface Props {
   stocks: StockData[];
@@ -59,8 +59,8 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
     return m;
   }, [stocks]);
 
-  const signals = useMemo(() => {
-    const m: Record<string, SignalResult> = {};
+  const technicals = useMemo(() => {
+    const m: Record<string, { signal: SignalResult; ma25: number | null; rsi: number | null }> = {};
     for (const s of stocks) {
       if (s.data?.length) {
         const ohlcv: OHLCV[] = s.data.map((r) => ({
@@ -71,7 +71,14 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
           close: Number(r.close) || 0,
           volume: Number(r.volume) || 0,
         }));
-        m[s.ticker] = calcSignal(ohlcv);
+        const closes = ohlcv.map((r) => r.close);
+        const sma25 = calcSMA(closes, 25);
+        const rsi14 = calcRSI(closes, 14);
+        m[s.ticker] = {
+          signal: calcSignal(ohlcv),
+          ma25: sma25[sma25.length - 1] ?? null,
+          rsi: rsi14[rsi14.length - 1] ?? null,
+        };
       }
     }
     return m;
@@ -103,7 +110,8 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
         {stocks.map((s) => {
           const name = displayName(s.ticker, s.name, tickerNames);
           const symbolCode = s.ticker;
-          const sig = signals[s.ticker];
+          const tech = technicals[s.ticker];
+          const sig = tech?.signal;
           return (
             <div key={s.ticker} className="stat-card">
               <div className="stat-card-header">
@@ -144,6 +152,30 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
                       <span className="label" style={{ fontSize: "0.75rem" }}>({s.low_min_date})</span>
                     </span>
                   </div>
+                  {tech?.ma25 != null && (
+                    <div className="stat-row">
+                      <span className="label">MA25</span>
+                      <span className="value">
+                        &yen;{formatPrice(tech.ma25)}
+                        {s.last_close > 0 && (
+                          <span className={`stat-indicator-tag ${s.last_close >= tech.ma25 ? "positive" : "negative"}`}>
+                            {s.last_close >= tech.ma25 ? "上" : "下"}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {tech?.rsi != null && (
+                    <div className="stat-row">
+                      <span className="label">RSI(14)</span>
+                      <span className="value">
+                        {tech.rsi.toFixed(1)}
+                        <span className={`stat-indicator-tag ${tech.rsi < 30 ? "positive" : tech.rsi > 70 ? "negative" : ""}`}>
+                          {tech.rsi < 30 ? "売られ過ぎ" : tech.rsi > 70 ? "買われ過ぎ" : ""}
+                        </span>
+                      </span>
+                    </div>
+                  )}
                   <div className="stat-row">
                     <span className="label">日数</span>
                     <span className="value">{s.count}日</span>
