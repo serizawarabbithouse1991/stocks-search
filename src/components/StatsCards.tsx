@@ -157,11 +157,15 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
                       <span className="label">MA25</span>
                       <span className="value">
                         &yen;{formatPrice(tech.ma25)}
-                        {s.last_close > 0 && (
-                          <span className={`stat-indicator-tag ${s.last_close >= tech.ma25 ? "positive" : "negative"}`}>
-                            {s.last_close >= tech.ma25 ? "上" : "下"}
-                          </span>
-                        )}
+                        {s.last_close > 0 && (() => {
+                          const above = s.last_close >= tech.ma25;
+                          const diff = ((s.last_close - tech.ma25) / tech.ma25 * 100).toFixed(1);
+                          return (
+                            <span className={`stat-indicator-tag ${above ? "positive" : "negative"}`}>
+                              {above ? "▲買い" : "▼売り"} ({above ? "+" : ""}{diff}%)
+                            </span>
+                          );
+                        })()}
                       </span>
                     </div>
                   )}
@@ -170,8 +174,8 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
                       <span className="label">RSI(14)</span>
                       <span className="value">
                         {tech.rsi.toFixed(1)}
-                        <span className={`stat-indicator-tag ${tech.rsi < 30 ? "positive" : tech.rsi > 70 ? "negative" : ""}`}>
-                          {tech.rsi < 30 ? "売られ過ぎ" : tech.rsi > 70 ? "買われ過ぎ" : ""}
+                        <span className={`stat-indicator-tag ${tech.rsi < 30 ? "positive" : tech.rsi > 70 ? "negative" : tech.rsi < 50 ? "positive" : "negative"}`}>
+                          {tech.rsi < 30 ? "▲強い買い" : tech.rsi < 50 ? "▲買い圏" : tech.rsi > 70 ? "▼強い売り" : "▼売り圏"}
                         </span>
                       </span>
                     </div>
