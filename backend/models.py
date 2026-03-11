@@ -29,6 +29,7 @@ class UserSettings(Base):
     theme = Column(String(16), default="dark")
     locale = Column(String(8), default="ja")
     selected_tickers = Column(Text, default="[]")
+    portfolio_data = Column(Text, default="[]")
 
     user = relationship("User", back_populates="settings")
 

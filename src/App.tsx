@@ -12,6 +12,7 @@ import StatsCards from "./components/StatsCards";
 import IndividualCharts from "./components/IndividualCharts";
 import WatchlistPanel from "./components/WatchlistPanel";
 import AIPanel from "./components/AIPanel";
+import PortfolioPanel from "./components/PortfolioPanel";
 import LegalModal, { PrivacyPolicy, TermsOfService } from "./components/LegalModal";
 import SettingsPanel from "./components/SettingsPanel";
 import AuthModal from "./components/AuthModal";
@@ -582,6 +583,9 @@ function App() {
         onLoad={(tickers) => setSelectedTickers(tickers)}
         tickerMeta={tickerMeta}
       />
+
+      {/* ポートフォリオ */}
+      <PortfolioPanel />
 
       {/* AI分析 */}
       <AIPanel

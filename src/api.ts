@@ -141,6 +141,78 @@ export async function llmAnalyze(
   return res.json();
 }
 
+// --- Portfolio ---
+export interface PortfolioPosition {
+  id: number;
+  ticker: string;
+  quantity: number;
+  avg_price: number;
+  broker: string;
+  name: string;
+  sector: string;
+  market: string;
+  scale: string;
+}
+
+export async function getPortfolioPositions(token: string): Promise<{ positions: PortfolioPosition[] }> {
+  const res = await fetch(`${API_BASE}/api/portfolio/positions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return { positions: [] };
+  return res.json();
+}
+
+export async function addPortfolioPosition(
+  token: string, pos: { ticker: string; quantity: number; avg_price: number; broker: string }
+): Promise<PortfolioPosition> {
+  const res = await fetch(`${API_BASE}/api/portfolio/positions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(pos),
+  });
+  if (!res.ok) throw new Error("Failed to add position");
+  return res.json();
+}
+
+export async function deletePortfolioPosition(token: string, posId: number) {
+  await fetch(`${API_BASE}/api/portfolio/positions/${posId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function importPortfolioCsv(token: string, file: File, broker: string) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/api/portfolio/import/csv?broker=${broker}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) throw new Error("CSV import failed");
+  return res.json();
+}
+
+export async function getPortfolioSummary(token: string) {
+  const res = await fetch(`${API_BASE}/api/portfolio/summary`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getMoomooStatus() {
+  const res = await fetch(`${API_BASE}/api/moomoo/status`);
+  if (!res.ok) return { connected: false };
+  return res.json();
+}
+
+export async function getMoomooPositions(market: string = "JP") {
+  const res = await fetch(`${API_BASE}/api/moomoo/positions?market=${market}`);
+  if (!res.ok) throw new Error("moomoo fetch failed");
+  return res.json();
+}
+
 export async function exportCsv(tickers: string[], start: string, end: string) {
   const res = await fetch(`${API_BASE}/api/export/csv`, {
     method: "POST",

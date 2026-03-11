@@ -21,16 +21,31 @@ from stock_service import (
 from database import init_db
 from routers.auth_router import router as auth_router
 from routers.sync_router import router as sync_router
+from routers.portfolio_router import router as portfolio_router
+from routers.moomoo_router import router as moomoo_router
 
-app = FastAPI(title="StocksView API", version="1.1.0")
+app = FastAPI(title="StocksView API", version="1.2.0")
 
 app.include_router(auth_router)
 app.include_router(sync_router)
+app.include_router(portfolio_router)
+app.include_router(moomoo_router)
 
 
 @app.on_event("startup")
 def on_startup():
     init_db()
+    _migrate_portfolio_column()
+
+
+def _migrate_portfolio_column():
+    """既存DBに portfolio_data カラムがなければ追加"""
+    from sqlalchemy import text, inspect
+    insp = inspect(engine)
+    cols = [c["name"] for c in insp.get_columns("user_settings")]
+    if "portfolio_data" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE user_settings ADD COLUMN portfolio_data TEXT DEFAULT '[]'"))
 
 app.add_middleware(
     CORSMiddleware,
