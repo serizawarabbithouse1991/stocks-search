@@ -18,6 +18,7 @@ import {
 import type { ComparisonPoint } from "../types";
 import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
+import { useChartColors } from "../ThemeContext";
 import CandlestickChart from "./CandlestickChart";
 
 type ChartType = "line" | "area" | "smooth" | "candle";
@@ -62,6 +63,7 @@ export default function StockChart({
   endDate,
   onPeriodChange,
 }: Props) {
+  const cc = useChartColors();
   const [chartType, setChartType] = useState<ChartType>("line");
   const [yAxisMode, setYAxisMode] = useState<YAxisMode>("normalized");
   const [showVolume, setShowVolume] = useState(true);
@@ -174,29 +176,29 @@ export default function StockChart({
     const ChartWrapper = useComposed ? ComposedChart : isArea ? AreaChart : LineChart;
     return (
       <ChartWrapper data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+        <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
         <XAxis
           dataKey="date"
-          tick={{ fill: "#8b949e", fontSize: 11 }}
+          tick={{ fill: cc.text, fontSize: 11 }}
           tickFormatter={(v: string) => v.slice(5)}
           interval={step}
         />
         <YAxis
           yAxisId="main"
-          tick={{ fill: "#8b949e", fontSize: 11 }}
+          tick={{ fill: cc.text, fontSize: 11 }}
           domain={["auto", "auto"]}
         />
         {showVolumeBar && (
-          <YAxis yAxisId="volume" orientation="right" hide tick={{ fill: "#8b949e" }} />
+          <YAxis yAxisId="volume" orientation="right" hide tick={{ fill: cc.text }} />
         )}
         <Tooltip
           contentStyle={{
-            background: "#161b22",
-            border: "1px solid #30363d",
+            background: cc.tooltipBg,
+            border: `1px solid ${cc.tooltipBorder}`,
             borderRadius: 6,
             fontSize: 13,
           }}
-          labelStyle={{ color: "#8b949e" }}
+          labelStyle={{ color: cc.text }}
           formatter={(value: number, name: string) => {
             const label =
               { volume: "出来高", vwap: "VWAP", sma20: "SMA(20)", sma50: "SMA(50)" }[name] ||
@@ -327,7 +329,7 @@ export default function StockChart({
           <Bar
             yAxisId="volume"
             dataKey="volume"
-            fill="#30363d"
+            fill={cc.volumeFill}
             radius={[2, 2, 0, 0]}
             maxBarSize={24}
             isAnimationActive={false}
@@ -474,13 +476,13 @@ export default function StockChart({
           <div className="chart-subpanel-title">RSI(14)</div>
           <ResponsiveContainer width="100%" height={120}>
             <LineChart data={priceChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-              <XAxis dataKey="date" tick={{ fill: "#8b949e", fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} hide />
-              <YAxis domain={[0, 100]} tick={{ fill: "#8b949e", fontSize: 10 }} width={32} />
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
+              <XAxis dataKey="date" tick={{ fill: cc.text, fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} hide />
+              <YAxis domain={[0, 100]} tick={{ fill: cc.text, fontSize: 10 }} width={32} />
               <ReferenceLine y={70} stroke="#f85149" strokeDasharray="2 2" />
               <ReferenceLine y={30} stroke="#3fb950" strokeDasharray="2 2" />
               <Tooltip
-                contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, fontSize: 12 }}
+                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 12 }}
                 formatter={(v: number) => [v.toFixed(1), "RSI"]}
                 labelFormatter={(l) => l}
               />
@@ -494,11 +496,11 @@ export default function StockChart({
           <div className="chart-subpanel-title">MACD(12,26,9)</div>
           <ResponsiveContainer width="100%" height={120}>
             <ComposedChart data={priceChartData} margin={{ top: 4, right: 20, left: 20, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-              <XAxis dataKey="date" tick={{ fill: "#8b949e", fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} />
-              <YAxis tick={{ fill: "#8b949e", fontSize: 10 }} width={48} />
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
+              <XAxis dataKey="date" tick={{ fill: cc.text, fontSize: 10 }} tickFormatter={(v) => v.slice(5)} interval={stepSub} />
+              <YAxis tick={{ fill: cc.text, fontSize: 10 }} width={48} />
               <Tooltip
-                contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, fontSize: 12 }}
+                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 12 }}
                 formatter={(value: number, name: string) => [value?.toFixed(3) ?? value, { macd: "MACD", macdSignal: "Signal", macdHistogram: "Histogram" }[name] ?? name]}
                 labelFormatter={(l) => l}
               />

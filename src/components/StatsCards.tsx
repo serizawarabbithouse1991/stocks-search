@@ -16,7 +16,7 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
         <div key={s.ticker} className="stat-card">
           <h3>
             {tickerNames[s.ticker] || s.ticker}
-            <span style={{ color: "#8b949e", fontWeight: 400, fontSize: "0.85rem", marginLeft: 8 }}>
+            <span className="label" style={{ fontWeight: 400, fontSize: "0.85rem", marginLeft: 8 }}>
               {s.ticker}
             </span>
           </h3>
@@ -32,14 +32,14 @@ export default function StatsCards({ stocks, tickerNames }: Props) {
             <span className="label">最高値</span>
             <span className="value">
               &yen;{formatPrice(s.high_max)}{" "}
-              <span style={{ color: "#8b949e", fontSize: "0.8rem" }}>({s.high_max_date})</span>
+              <span className="label" style={{ fontSize: "0.8rem" }}>({s.high_max_date})</span>
             </span>
           </div>
           <div className="stat-row">
             <span className="label">最安値</span>
             <span className="value">
               &yen;{formatPrice(s.low_min)}{" "}
-              <span style={{ color: "#8b949e", fontSize: "0.8rem" }}>({s.low_min_date})</span>
+              <span className="label" style={{ fontSize: "0.8rem" }}>({s.low_min_date})</span>
             </span>
           </div>
           <div className="stat-row">

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
+import { useChartColors } from "../ThemeContext";
 
 interface Props {
   stocks: StockData[];
@@ -51,6 +52,7 @@ function SingleStockChart({
   stock: StockData;
   name: string;
 }) {
+  const cc = useChartColors();
   const [flags, setFlags] = useState<IndicatorFlags>({ ...DEFAULT_FLAGS });
 
   const toggle = (key: keyof IndicatorFlags) =>
@@ -126,18 +128,18 @@ function SingleStockChart({
       {/* メインチャート: 価格 + オーバーレイ指標 + 出来高 */}
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+          <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
           <XAxis
             dataKey="date"
-            tick={{ fill: "#8b949e", fontSize: 10 }}
+            tick={{ fill: cc.text, fontSize: 10 }}
             tickFormatter={(v: string) => v.slice(5)}
             interval={step}
           />
-          <YAxis yAxisId="price" tick={{ fill: "#8b949e", fontSize: 10 }} domain={["auto", "auto"]} />
+          <YAxis yAxisId="price" tick={{ fill: cc.text, fontSize: 10 }} domain={["auto", "auto"]} />
           {flags.volume && <YAxis yAxisId="vol" orientation="right" hide />}
           <Tooltip
-            contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, fontSize: 12 }}
-            labelStyle={{ color: "#8b949e" }}
+            contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 12 }}
+            labelStyle={{ color: cc.text }}
             formatter={(value: number, n: string) => {
               const nameMap: Record<string, string> = {
                 close: "終値",
@@ -171,7 +173,7 @@ function SingleStockChart({
             <Line yAxisId="price" type="monotone" dataKey="sma200" stroke="#d29922" strokeWidth={1.5} dot={false} connectNulls name="sma200" />
           )}
           {flags.volume && (
-            <Bar yAxisId="vol" dataKey="volume" fill="#30363d" radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
+            <Bar yAxisId="vol" dataKey="volume" fill={cc.volumeFill} radius={[2, 2, 0, 0]} maxBarSize={20} isAnimationActive={false} name="volume" />
           )}
           <Legend
             formatter={(v: string) =>
@@ -188,13 +190,13 @@ function SingleStockChart({
           <div className="chart-subpanel-title">RSI(14)</div>
           <ResponsiveContainer width="100%" height={100}>
             <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="date" hide />
-              <YAxis domain={[0, 100]} tick={{ fill: "#8b949e", fontSize: 10 }} width={32} />
+              <YAxis domain={[0, 100]} tick={{ fill: cc.text, fontSize: 10 }} width={32} />
               <ReferenceLine y={70} stroke="#f85149" strokeDasharray="2 2" />
               <ReferenceLine y={30} stroke="#3fb950" strokeDasharray="2 2" />
               <Tooltip
-                contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, fontSize: 11 }}
+                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 11 }}
                 formatter={(v: number) => [v.toFixed(1), "RSI"]}
               />
               <Line type="monotone" dataKey="rsi" stroke="#bc8cff" strokeWidth={2} dot={false} connectNulls name="RSI" />
@@ -209,11 +211,11 @@ function SingleStockChart({
           <div className="chart-subpanel-title">MACD(12,26,9)</div>
           <ResponsiveContainer width="100%" height={100}>
             <ComposedChart data={data} margin={{ top: 4, right: 20, left: 10, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+              <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="date" hide />
-              <YAxis tick={{ fill: "#8b949e", fontSize: 10 }} width={48} />
+              <YAxis tick={{ fill: cc.text, fontSize: 10 }} width={48} />
               <Tooltip
-                contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, fontSize: 11 }}
+                contentStyle={{ background: cc.tooltipBg, border: `1px solid ${cc.tooltipBorder}`, borderRadius: 6, fontSize: 11 }}
                 formatter={(v: number, n: string) => [
                   v?.toFixed(3) ?? v,
                   { macd: "MACD", macdSignal: "Signal", macdHistogram: "Histogram" }[n] ?? n,

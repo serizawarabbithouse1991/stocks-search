@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import type { StockData } from "../types";
 import { addIndicators } from "../indicators";
+import { useChartColors } from "../ThemeContext";
 
 interface Props {
   stock: StockData;
@@ -9,9 +10,6 @@ interface Props {
 
 const UP_COLOR = "#3fb950";
 const DOWN_COLOR = "#f85149";
-const GRID_COLOR = "#30363d";
-const TEXT_COLOR = "#8b949e";
-const BG_COLOR = "#0d1117";
 
 interface Row {
   date: string;
@@ -28,6 +26,7 @@ interface Row {
 }
 
 export default function CandlestickChart({ stock, tickerName }: Props) {
+  const cc = useChartColors();
   const [showVolume, setShowVolume] = useState(true);
   const [showSMA20, setShowSMA20] = useState(false);
   const [showSMA50, setShowSMA50] = useState(false);
@@ -145,7 +144,7 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
         ref={svgRef}
         viewBox={`0 0 ${chartWidth} ${totalHeight}`}
         width="100%"
-        style={{ background: BG_COLOR, borderRadius: 8 }}
+        style={{ background: cc.bg, borderRadius: 8 }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverIdx(null)}
       >
@@ -155,15 +154,15 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
           const y = yPrice(val);
           return (
             <g key={`grid-${i}`}>
-              <line x1={margin.left} y1={y} x2={chartWidth - margin.right} y2={y} stroke={GRID_COLOR} strokeWidth={0.5} />
-              <text x={chartWidth - margin.right + 4} y={y + 3} fill={TEXT_COLOR} fontSize={10}>{Math.round(val).toLocaleString()}</text>
+              <line x1={margin.left} y1={y} x2={chartWidth - margin.right} y2={y} stroke={cc.grid} strokeWidth={0.5} />
+              <text x={chartWidth - margin.right + 4} y={y + 3} fill={cc.text} fontSize={10}>{Math.round(val).toLocaleString()}</text>
             </g>
           );
         })}
         {/* X 軸ラベル */}
         {data.map((d, i) =>
           i % labelStep === 0 ? (
-            <text key={`x-${i}`} x={xPos(i)} y={margin.top + priceHeight + volHeight + 16} fill={TEXT_COLOR} fontSize={10} textAnchor="middle">
+            <text key={`x-${i}`} x={xPos(i)} y={margin.top + priceHeight + volHeight + 16} fill={cc.text} fontSize={10} textAnchor="middle">
               {d.date.length > 10 ? d.date.slice(11, 16) : d.date.slice(5)}
             </text>
           ) : null
@@ -190,7 +189,7 @@ export default function CandlestickChart({ stock, tickerName }: Props) {
           return (
             <g key={`c-${i}`}>
               <line x1={cx} y1={yPrice(d.high)} x2={cx} y2={yPrice(d.low)} stroke={color} strokeWidth={1} />
-              <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={d.isUp ? BG_COLOR : color} stroke={color} strokeWidth={1} />
+              <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={d.isUp ? cc.bg : color} stroke={color} strokeWidth={1} />
             </g>
           );
         })}

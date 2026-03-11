@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { StocksResponse, SearchResult } from "./types";
 import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, type LatestPrice } from "./api";
+import { useTheme } from "./ThemeContext";
 import StockChart from "./components/StockChart";
 import StockTable from "./components/StockTable";
 import StatsCards from "./components/StatsCards";
@@ -11,6 +12,7 @@ const SUGGEST_DEBOUNCE_MS = 300;
 type Tab = "chart" | "individual" | "table";
 
 function App() {
+  const { theme, toggle: toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [source, setSource] = useState<"yfinance" | "jquants">("jquants");
   const [selectedTickers, setSelectedTickers] = useState<{ code: string; name: string }[]>([]);
@@ -167,7 +169,16 @@ function App() {
 
   return (
     <>
-      <h1>Stock Screener - 株式銘柄比較ツール</h1>
+      <header className="app-header">
+        <h1>Stock Screener - 株式銘柄比較ツール</h1>
+        <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "ライトモードに切替" : "ダークモードに切替"}
+        >
+          {theme === "dark" ? "\u2600" : "\u263E"}
+        </button>
+      </header>
 
       {/* 検索パネル */}
       <div className="panel">
@@ -270,7 +281,7 @@ function App() {
             </optgroup>
           </select>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <span style={{ color: "#8b949e", alignSelf: "center" }}>〜</span>
+          <span className="date-separator">〜</span>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           <button onClick={() => handleFetch()} disabled={loading || selectedTickers.length === 0}>
             {loading ? "取得中..." : "データ取得"}
