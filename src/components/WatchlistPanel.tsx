@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getWatchlists, putWatchlists, type SyncWatchlist } from "../auth/api";
+import type { TickerMeta } from "../api";
 
 interface Ticker {
   code: string;
@@ -17,6 +18,7 @@ interface Watchlist {
 interface Props {
   currentTickers: Ticker[];
   onLoad: (tickers: Ticker[]) => void;
+  tickerMeta?: Record<string, TickerMeta>;
 }
 
 const STORAGE_KEY = "stock-watchlists";
@@ -73,6 +75,128 @@ function parseTxt(text: string): Ticker[] {
   return result;
 }
 
+/**
+ * CSV パーサ。
+ * ヘッダー行あり: code / ticker / 銘柄コード 列を自動検出。
+ * ヘッダー行なし: 1列目をコードとして扱う。
+ */
+function parseCsv(text: string): Ticker[] {
+  const seen = new Set<string>();
+  const result: Ticker[] = [];
+  const lines = text
+    .split(/[\r\n]+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return result;
+
+  const firstRow = splitCsvRow(lines[0]);
+  const headerIndex = findCodeColumn(firstRow);
+  const nameIndex = findNameColumn(firstRow);
+  const hasHeader = headerIndex >= 0;
+  const codeCol = hasHeader ? headerIndex : 0;
+  const nameCol = hasHeader ? nameIndex : -1;
+  const startRow = hasHeader ? 1 : 0;
+
+  for (let i = startRow; i < lines.length; i++) {
+    const cols = splitCsvRow(lines[i]);
+    let raw = (cols[codeCol] ?? "").trim();
+    if (!raw) continue;
+    raw = raw.replace(/^[A-Z]+:/, "");
+    let code = raw;
+    if (/^\d{3,4}[A-Z]?$/.test(code) && !code.includes(".")) {
+      code = `${code}.T`;
+    }
+    if (seen.has(code)) continue;
+    seen.add(code);
+    const name = nameCol >= 0 ? (cols[nameCol] ?? "").trim() || code.replace(/\.T$/, "") : code.replace(/\.T$/, "");
+    result.push({ code, name });
+  }
+  return result;
+}
+
+function splitCsvRow(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuote) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuote = false;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      inQuote = true;
+    } else if (ch === ",") {
+      result.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+function findCodeColumn(headers: string[]): number {
+  const candidates = ["code", "ticker", "symbol", "コード", "銘柄コード", "ティッカー"];
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i].trim().toLowerCase();
+    if (candidates.some((c) => h === c || h === c.toLowerCase())) return i;
+  }
+  return -1;
+}
+
+function findNameColumn(headers: string[]): number {
+  const candidates = ["name", "銘柄名", "銘柄", "企業名", "会社名"];
+  for (let i = 0; i < headers.length; i++) {
+    const h = headers[i].trim().toLowerCase();
+    if (candidates.some((c) => h === c || h === c.toLowerCase())) return i;
+  }
+  return -1;
+}
+
+function exportAsCsv(
+  tickers: Ticker[],
+  meta?: Record<string, TickerMeta>,
+  listName?: string,
+) {
+  const header = ["code", "name", "market", "sector33", "sector17", "scale"];
+  const rows = tickers.map((t) => {
+    const m = meta?.[t.code];
+    return [
+      t.code,
+      csvEscape(m?.name || t.name),
+      csvEscape(m?.market || ""),
+      csvEscape(m?.sector33 || ""),
+      csvEscape(m?.sector17 || ""),
+      csvEscape(m?.scale || ""),
+    ].join(",");
+  });
+  const bom = "\uFEFF";
+  const text = bom + header.join(",") + "\n" + rows.join("\n") + "\n";
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${listName || "watchlist"}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(val: string): string {
+  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
 function exportAsTxt(tickers: Ticker[], listName?: string) {
   const lines = tickers.map((t) => {
     const code = t.code.replace(/\.T$/, "");
@@ -90,7 +214,7 @@ function exportAsTxt(tickers: Ticker[], listName?: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
+export default function WatchlistPanel({ currentTickers, onLoad, tickerMeta }: Props) {
   const { token } = useAuth();
   const [watchlists, setWatchlists] = useState<Watchlist[]>(loadWatchlists);
   const [isOpen, setIsOpen] = useState(true);
@@ -176,6 +300,11 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
     );
   };
 
+  const parseFile = (file: File, text: string): Ticker[] => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    return ext === "csv" ? parseCsv(text) : parseTxt(text);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -183,10 +312,8 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
-      const tickers = parseTxt(text);
-      if (tickers.length > 0) {
-        onLoad(tickers);
-      }
+      const tickers = parseFile(file, text);
+      if (tickers.length > 0) onLoad(tickers);
     };
     reader.readAsText(file);
     if (fileRef.current) fileRef.current.value = "";
@@ -199,7 +326,7 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
-      const tickers = parseTxt(text);
+      const tickers = parseFile(file, text);
       if (tickers.length > 0) {
         const name = file.name.replace(/\.[^.]+$/, "") || "インポート";
         const w: Watchlist = {
@@ -239,7 +366,7 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
                 onChange={handleFileChange}
                 hidden
               />
-              TXTを選択に読込
+              ファイルから読込
             </label>
             <label className="wl-file-btn">
               <input
@@ -249,7 +376,7 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
                 onChange={handleImportAsWatchlist}
                 hidden
               />
-              TXTをリストに保存
+              ファイルをリストに保存
             </label>
             {currentTickers.length > 0 && !showSaveInput && (
               <button
@@ -261,13 +388,24 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
               </button>
             )}
             {currentTickers.length > 0 && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => exportAsTxt(currentTickers)}
-              >
-                TXTエクスポート
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => exportAsTxt(currentTickers)}
+                  title="TradingView互換TXT形式"
+                >
+                  TXTエクスポート
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => exportAsCsv(currentTickers, tickerMeta)}
+                  title="メタデータ付きCSV形式"
+                >
+                  CSVエクスポート
+                </button>
+              </>
             )}
           </div>
 
@@ -363,7 +501,15 @@ export default function WatchlistPanel({ currentTickers, onLoad }: Props) {
                             onClick={() => exportAsTxt(w.tickers, w.name)}
                             title="TXTエクスポート"
                           >
-                            ↓
+                            .txt
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => exportAsCsv(w.tickers, tickerMeta, w.name)}
+                            title="CSVエクスポート"
+                          >
+                            .csv
                           </button>
                           <button type="button" className="danger" onClick={() => handleDelete(w.id)}>
                             削除

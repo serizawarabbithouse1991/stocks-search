@@ -468,6 +468,7 @@ function App() {
       <WatchlistPanel
         currentTickers={selectedTickers}
         onLoad={(tickers) => setSelectedTickers(tickers)}
+        tickerMeta={tickerMeta}
       />
 
       {/* エラー表示 */}
