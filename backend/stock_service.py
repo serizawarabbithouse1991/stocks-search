@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 from typing import Optional
 
+import master
 
 VALID_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo"}
 
@@ -13,6 +14,10 @@ _name_cache: dict[str, str] = {}
 def resolve_name(ticker: str) -> str:
     if ticker in _name_cache:
         return _name_cache[ticker]
+    master_name = master.resolve_name(ticker)
+    if master_name:
+        _name_cache[ticker] = master_name
+        return master_name
     try:
         info = yf.Ticker(ticker).info
         name = info.get("longName") or info.get("shortName") or ticker

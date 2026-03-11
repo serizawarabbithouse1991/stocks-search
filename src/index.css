@@ -324,7 +324,7 @@ button.danger:hover {
 
 /* ===== Search Results ===== */
 .search-results {
-  max-height: 200px;
+  max-height: 360px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -369,6 +369,13 @@ button.danger:hover {
 .search-result-item .sector {
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+.search-result-item .market {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-left: 8px;
+  white-space: nowrap;
 }
 
 /* ===== Stats Header ===== */

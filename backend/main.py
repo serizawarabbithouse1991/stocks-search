@@ -2,12 +2,15 @@
 
 import csv
 import io
+from typing import Optional
+
 import yfinance as yf
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+import master
 from stock_service import (
     get_stock_data_yfinance,
     get_latest_price_yfinance,
@@ -45,11 +48,26 @@ def search_stocks(
     q: str = Query(..., min_length=1, description="銘柄コードまたは銘柄名"),
     source: str = Query("yfinance"),
     fuzzy: bool = Query(True),
+    limit: int = Query(20, ge=1, le=100),
 ):
-    """銘柄検索 (yfinance)"""
+    """銘柄検索 - マスタ優先、フォールバックで yfinance"""
     try:
         query = q.strip()
-        # 数字4桁なら日本株として .T を付けて検索
+
+        master_hits = master.search(query, limit=limit, fuzzy=fuzzy)
+        if master_hits:
+            results = [
+                {
+                    "code": h["code_t"],
+                    "name": h["name"],
+                    "name_en": "",
+                    "sector": h["sector33"],
+                    "market": h["market"],
+                }
+                for h in master_hits
+            ]
+            return {"source": "master", "results": results}
+
         if query.isdigit() and len(query) == 4:
             query = f"{query}.T"
 
@@ -154,6 +172,25 @@ def export_csv(query: StockQuery):
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=stocks_data.csv"},
     )
+
+
+# --- マスタ管理 ---
+@app.get("/api/master/status")
+def master_status():
+    """銘柄マスタの状態を返す"""
+    return master.status()
+
+
+@app.post("/api/master/reload")
+def master_reload(path: Optional[str] = None):
+    """銘柄マスタを再読み込みする"""
+    try:
+        count = master.load(path)
+        return {"ok": True, "count": count, **master.status()}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

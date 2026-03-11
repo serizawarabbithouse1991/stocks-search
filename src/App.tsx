@@ -230,14 +230,15 @@ function App() {
           <div className="search-results" ref={resultsRef}>
             {searchResults.map((r, i) => (
               <div
-                key={r.code}
+                key={`${r.code}-${i}`}
                 className={`search-result-item ${i === highlightIndex ? "highlight" : ""}`}
                 onClick={() => addTicker(r)}
                 onMouseEnter={() => setHighlightIndex(i)}
               >
                 <span className="code">{r.code}</span>
                 <span className="name">{r.name}</span>
-                <span className="sector">{r.sector}</span>
+                {r.sector && <span className="sector">{r.sector}</span>}
+                {r.market && <span className="market">{r.market}</span>}
               </div>
             ))}
           </div>
