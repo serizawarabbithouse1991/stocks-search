@@ -180,6 +180,32 @@ def search(query: str, limit: int = 20, fuzzy: bool = True) -> list[dict]:
     return deduped
 
 
+def list_tags() -> dict[str, list[str]]:
+    """全タグ(sector33, sector17, market, scale)の選択肢一覧を返す。"""
+    with _lock:
+        entries = list(_entries)
+    tags: dict[str, set[str]] = {
+        "sector33": set(),
+        "sector17": set(),
+        "market": set(),
+        "scale": set(),
+    }
+    for e in entries:
+        for key in tags:
+            val = e.get(key, "")
+            if val:
+                tags[key].add(val)
+    return {k: sorted(v) for k, v in tags.items()}
+
+
+def filter_by_tag(field: str, value: str, limit: int = 500) -> list[dict]:
+    """指定フィールドの値が一致するエントリを返す。"""
+    with _lock:
+        entries = list(_entries)
+    results = [e for e in entries if e.get(field, "") == value]
+    return results[:limit]
+
+
 def _auto_load():
     """モジュール読み込み時に自動ロードを試行する。"""
     if _MASTER_PATH.exists():

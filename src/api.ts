@@ -64,6 +64,33 @@ export async function fetchMeta(
   return res.json();
 }
 
+export interface TagsResponse {
+  sector33: string[];
+  sector17: string[];
+  market: string[];
+  scale: string[];
+}
+
+export async function fetchTags(): Promise<TagsResponse> {
+  const res = await fetch(`${API_BASE}/api/master/tags`);
+  if (!res.ok) return { sector33: [], sector17: [], market: [], scale: [] };
+  return res.json();
+}
+
+export interface FilterResult {
+  field: string;
+  value: string;
+  count: number;
+  tickers: { code: string; name: string }[];
+}
+
+export async function filterByTag(field: string, value: string): Promise<FilterResult> {
+  const params = new URLSearchParams({ field, value });
+  const res = await fetch(`${API_BASE}/api/master/filter?${params}`);
+  if (!res.ok) throw new Error("Filter failed");
+  return res.json();
+}
+
 export async function exportCsv(tickers: string[], start: string, end: string) {
   const res = await fetch(`${API_BASE}/api/export/csv`, {
     method: "POST",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { StocksResponse, SearchResult } from "./types";
-import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, fetchMeta, type LatestPrice, type TickerMeta } from "./api";
+import { searchStocks, fetchStocks, exportCsv, fetchLatestPrices, fetchMeta, fetchTags, filterByTag, type LatestPrice, type TickerMeta, type TagsResponse } from "./api";
 import { calcSignal, type OHLCV, type SignalResult } from "./indicators";
 import { useLocale } from "./i18n";
 import { useAuth } from "./auth/AuthContext";
@@ -47,6 +47,9 @@ function App() {
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tickerMeta, setTickerMeta] = useState<Record<string, TickerMeta>>({});
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [availableTags, setAvailableTags] = useState<TagsResponse | null>(null);
+  const [tagLoading, setTagLoading] = useState(false);
 
   const runSearch = useCallback(
     async (q: string) => {
@@ -165,6 +168,33 @@ function App() {
 
   const removeTicker = (code: string) => {
     setSelectedTickers(selectedTickers.filter((t) => t.code !== code));
+  };
+
+  const openTagPicker = async () => {
+    setTagPickerOpen(true);
+    if (!availableTags) {
+      const tags = await fetchTags();
+      setAvailableTags(tags);
+    }
+  };
+
+  const handleTagSelect = async (field: string, value: string) => {
+    setTagLoading(true);
+    try {
+      const result = await filterByTag(field, value);
+      if (result.tickers.length > 0) {
+        const existing = new Set(selectedTickers.map((t) => t.code));
+        const newTickers = result.tickers.filter((t) => !existing.has(t.code));
+        if (newTickers.length > 0) {
+          setSelectedTickers((prev) => [...prev, ...newTickers]);
+        }
+      }
+      setTagPickerOpen(false);
+    } catch {
+      // ignore
+    } finally {
+      setTagLoading(false);
+    }
   };
 
   const handleFetch = async (range?: { start: string; end: string }) => {
@@ -332,7 +362,59 @@ function App() {
           <button onClick={handleSearch} disabled={searching}>
             {searching ? t("search.searching") : t("search.button")}
           </button>
+          <button className="secondary" onClick={openTagPicker} title="業種・市場・規模で一括追加">
+            タグ追加
+          </button>
         </div>
+
+        {/* タグ一括追加ピッカー */}
+        {tagPickerOpen && (
+          <div className="tag-picker-overlay" onClick={() => setTagPickerOpen(false)}>
+            <div className="tag-picker" onClick={(e) => e.stopPropagation()}>
+              <div className="tag-picker-header">
+                <h3>タグで銘柄を一括追加</h3>
+                <button className="tag-picker-close" onClick={() => setTagPickerOpen(false)}>&times;</button>
+              </div>
+              {tagLoading && <p className="tag-picker-loading">読み込み中...</p>}
+              {availableTags && !tagLoading && (
+                <div className="tag-picker-body">
+                  <div className="tag-picker-section">
+                    <h4>33業種区分</h4>
+                    <div className="tag-picker-chips">
+                      {availableTags.sector33.map((v) => (
+                        <button key={v} className="tag-picker-chip" onClick={() => handleTagSelect("sector33", v)}>{v}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="tag-picker-section">
+                    <h4>17業種区分</h4>
+                    <div className="tag-picker-chips">
+                      {availableTags.sector17.map((v) => (
+                        <button key={v} className="tag-picker-chip" onClick={() => handleTagSelect("sector17", v)}>{v}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="tag-picker-section">
+                    <h4>市場区分</h4>
+                    <div className="tag-picker-chips">
+                      {availableTags.market.map((v) => (
+                        <button key={v} className="tag-picker-chip" onClick={() => handleTagSelect("market", v)}>{v}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="tag-picker-section">
+                    <h4>規模区分</h4>
+                    <div className="tag-picker-chips">
+                      {availableTags.scale.map((v) => (
+                        <button key={v} className="tag-picker-chip" onClick={() => handleTagSelect("scale", v)}>{v}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 検索結果（提案ドロップダウン） */}
         {showResults && searchResults.length > 0 && (

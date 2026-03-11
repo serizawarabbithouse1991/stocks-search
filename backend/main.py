@@ -216,6 +216,34 @@ def master_meta(
     return result
 
 
+@app.get("/api/master/tags")
+def master_tags():
+    """タグ一覧（sector33, sector17, market, scale）を返す"""
+    return master.list_tags()
+
+
+@app.get("/api/master/filter")
+def master_filter(
+    field: str = Query(..., description="フィールド名: sector33, sector17, market, scale"),
+    value: str = Query(..., description="フィルタ値"),
+    limit: int = Query(500, ge=1, le=2000),
+):
+    """タグでフィルタし、該当銘柄一覧を返す"""
+    allowed = {"sector33", "sector17", "market", "scale"}
+    if field not in allowed:
+        raise HTTPException(status_code=400, detail=f"field は {allowed} のいずれか")
+    entries = master.filter_by_tag(field, value, limit)
+    return {
+        "field": field,
+        "value": value,
+        "count": len(entries),
+        "tickers": [
+            {"code": e["code_t"], "name": e["name"]}
+            for e in entries
+        ],
+    }
+
+
 @app.post("/api/master/reload")
 def master_reload(path: Optional[str] = None):
     """銘柄マスタを再読み込みする"""
@@ -231,4 +259,5 @@ def master_reload(path: Optional[str] = None):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
 
