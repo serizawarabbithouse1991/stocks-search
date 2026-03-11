@@ -1,0 +1,304 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", "Meiryo", sans-serif;
+  background: #0f1117;
+  color: #e1e4e8;
+  min-height: 100vh;
+}
+
+#root {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #58a6ff;
+}
+
+h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #c9d1d9;
+}
+
+.panel {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-bar input,
+.search-bar select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #e1e4e8;
+  font-size: 0.9rem;
+}
+
+.search-bar input:focus,
+.search-bar select:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+
+.search-bar input[type="text"] {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-bar input[type="date"] {
+  width: 160px;
+}
+
+button {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #2ea043;
+}
+
+button:disabled {
+  background: #21262d;
+  color: #484f58;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #21262d;
+  border: 1px solid #30363d;
+}
+
+button.secondary:hover {
+  background: #30363d;
+}
+
+button.danger {
+  background: #da3633;
+}
+
+button.danger:hover {
+  background: #f85149;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #1f6feb33;
+  border: 1px solid #1f6feb;
+  color: #58a6ff;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+
+.tag button {
+  background: none;
+  border: none;
+  color: #58a6ff;
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.search-result-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #21262d;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.search-result-item:hover {
+  background: #1f6feb22;
+}
+
+.search-result-item .code {
+  color: #58a6ff;
+  font-weight: 600;
+  margin-right: 12px;
+  min-width: 60px;
+}
+
+.search-result-item .name {
+  flex: 1;
+}
+
+.search-result-item .sector {
+  color: #8b949e;
+  font-size: 0.8rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.stat-card h3 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #58a6ff;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 0.85rem;
+}
+
+.stat-row .label {
+  color: #8b949e;
+}
+
+.stat-row .value {
+  font-weight: 600;
+}
+
+.positive {
+  color: #3fb950;
+}
+
+.negative {
+  color: #f85149;
+}
+
+.chart-container {
+  width: 100%;
+  height: 400px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #8b949e;
+}
+
+.error {
+  background: #f8514922;
+  border: 1px solid #f85149;
+  border-radius: 6px;
+  padding: 12px;
+  color: #f85149;
+  margin-bottom: 12px;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #30363d;
+}
+
+.tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 0.9rem;
+  background: none;
+  border-radius: 0;
+}
+
+.tab:hover {
+  color: #e1e4e8;
+  background: none;
+}
+
+.tab.active {
+  color: #58a6ff;
+  border-bottom-color: #58a6ff;
+  background: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th, td {
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid #21262d;
+}
+
+th {
+  color: #8b949e;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: #161b22;
+}
+
+td:first-child, th:first-child {
+  text-align: left;
+}
+
+.table-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+}

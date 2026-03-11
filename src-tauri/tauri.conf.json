@@ -1,0 +1,50 @@
+{
+  "productName": "StocksSearch",
+  "version": "1.0.0",
+  "identifier": "com.stocks-search.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "title": "株式銘柄比較ツール",
+    "windows": [
+      {
+        "title": "株式銘柄比較ツール",
+        "width": 1300,
+        "height": 850,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/backend"
+    ]
+  },
+  "plugins": {
+    "shell": {
+      "sidecar": true,
+      "scope": [
+        {
+          "name": "binaries/backend",
+          "sidecar": true
+        }
+      ]
+    }
+  }
+}
