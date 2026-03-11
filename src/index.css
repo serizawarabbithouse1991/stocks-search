@@ -104,9 +104,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  margin-bottom: 8px;
-  gap: 12px;
+  padding: 21px 0;
+  margin-bottom: 10px;
+  gap: 16px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -130,18 +130,18 @@ body {
 }
 
 .header-user {
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   color: var(--accent);
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 5px 16px;
   background: var(--accent-bg);
   border-radius: 6px;
   white-space: nowrap;
 }
 
 .header-login-btn {
-  font-size: 0.82rem;
-  padding: 6px 14px;
+  font-size: 1.07rem;
+  padding: 8px 18px;
   background: var(--accent-bg);
   color: var(--accent);
   border: 1px solid var(--accent-border);
@@ -156,7 +156,7 @@ body {
 }
 
 .app-header h1 {
-  font-size: 1.35rem;
+  font-size: 1.76rem;
   font-weight: 700;
   color: var(--accent);
   margin: 0;
@@ -164,7 +164,7 @@ body {
 }
 
 .header-subtitle {
-  font-size: 0.78rem;
+  font-size: 1.01rem;
   color: var(--text-muted);
   font-weight: 400;
 }
@@ -174,10 +174,10 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
-  width: 40px;
-  height: 40px;
-  padding: 9px;
+  gap: 6px;
+  width: 52px;
+  height: 52px;
+  padding: 12px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
