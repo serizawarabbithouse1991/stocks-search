@@ -128,6 +128,111 @@ def get_latest_price_yfinance(ticker: str) -> Optional[dict]:
         return None
 
 
+def get_stock_data_batch(
+    tickers: list[str], start: str, end: str, interval: str = "1d"
+) -> tuple[list[dict], list[str]]:
+    """複数銘柄を一括ダウンロードして個別結果に分解する。
+    Returns (results, errors)."""
+    if interval not in VALID_INTERVALS:
+        interval = "1d"
+
+    is_intraday = interval not in ("1d", "5d", "1wk", "1mo")
+    fmt = "%Y-%m-%d %H:%M" if is_intraday else "%Y-%m-%d"
+
+    actual_start = start
+    if is_intraday:
+        max_days = _MAX_PERIOD_DAYS.get(interval, 60)
+        from datetime import datetime, timedelta
+        start_dt = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = datetime.strptime(end, "%Y-%m-%d")
+        if (end_dt - start_dt).days > max_days:
+            actual_start = (end_dt - timedelta(days=max_days)).strftime("%Y-%m-%d")
+
+    results: list[dict] = []
+    errors: list[str] = []
+
+    BATCH_SIZE = 20
+    for i in range(0, len(tickers), BATCH_SIZE):
+        batch = tickers[i : i + BATCH_SIZE]
+        try:
+            df = yf.download(
+                batch,
+                start=actual_start,
+                end=end,
+                interval=interval,
+                progress=False,
+                group_by="ticker",
+                threads=True,
+            )
+        except Exception as e:
+            print(f"yfinance batch error: {e}")
+            for t in batch:
+                errors.append(f"{t}: データ取得失敗")
+            continue
+
+        if df.empty:
+            for t in batch:
+                errors.append(f"{t}: データ取得失敗")
+            continue
+
+        for ticker in batch:
+            try:
+                if len(batch) == 1:
+                    tdf = df
+                    if isinstance(tdf.columns, pd.MultiIndex):
+                        tdf = tdf.copy()
+                        tdf.columns = tdf.columns.get_level_values(0)
+                else:
+                    if ticker not in df.columns.get_level_values(0):
+                        errors.append(f"{ticker}: データ取得失敗")
+                        continue
+                    tdf = df[ticker].copy()
+
+                tdf = tdf.dropna(subset=["Close"])
+                if tdf.empty:
+                    errors.append(f"{ticker}: データ取得失敗")
+                    continue
+
+                records = []
+                for idx, row in tdf.iterrows():
+                    records.append({
+                        "date": idx.strftime(fmt),
+                        "open": round(float(row["Open"]), 1),
+                        "high": round(float(row["High"]), 1),
+                        "low": round(float(row["Low"]), 1),
+                        "close": round(float(row["Close"]), 1),
+                        "volume": int(row["Volume"]) if pd.notna(row["Volume"]) else 0,
+                    })
+
+                if not records:
+                    errors.append(f"{ticker}: データ取得失敗")
+                    continue
+
+                close_vals = tdf["Close"]
+                name = resolve_name(ticker)
+                results.append({
+                    "ticker": ticker,
+                    "name": name,
+                    "interval": interval,
+                    "count": len(records),
+                    "first_close": round(float(close_vals.iloc[0]), 1),
+                    "last_close": round(float(close_vals.iloc[-1]), 1),
+                    "high_max": round(float(tdf["High"].max()), 1),
+                    "high_max_date": tdf["High"].idxmax().strftime(fmt),
+                    "low_min": round(float(tdf["Low"].min()), 1),
+                    "low_min_date": tdf["Low"].idxmin().strftime(fmt),
+                    "change_pct": round(
+                        (float(close_vals.iloc[-1]) / float(close_vals.iloc[0]) - 1) * 100, 2
+                    ),
+                    "data": records,
+                })
+            except Exception as e:
+                print(f"yfinance parse error for {ticker}: {e}")
+                errors.append(f"{ticker}: データ取得失敗")
+
+    return results, errors
+
+
 def normalize_for_comparison(stocks_data: list[dict]) -> list[dict]:
     """複数銘柄の終値を基準日=100に正規化して比較用データを作成"""
     if not stocks_data:

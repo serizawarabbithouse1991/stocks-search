@@ -51,7 +51,7 @@ function parseTxt(text: string): Ticker[] {
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
 
-  for (const line of lines) {
+    for (const line of lines) {
     const parts = line.split(",").map((p) => p.trim()).filter(Boolean);
     for (let part of parts) {
       part = part.replace(/^[A-Z]+:/, "");
@@ -59,7 +59,8 @@ function parseTxt(text: string): Ticker[] {
       if (!part) continue;
 
       let code = part;
-      if (/^\d{4}$/.test(code)) {
+      // 日本株コード: 4桁数字 or 3-4桁数字+英字1文字 (例: 7203, 285A, 429A)
+      if (/^\d{3,4}[A-Z]?$/.test(code) && !code.includes(".")) {
         code = `${code}.T`;
       }
 

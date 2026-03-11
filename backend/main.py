@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import master
 from stock_service import (
     get_stock_data_yfinance,
+    get_stock_data_batch,
     get_latest_price_yfinance,
     normalize_for_comparison,
 )
@@ -79,7 +80,8 @@ def search_stocks(
             ]
             return {"source": "master", "results": results}
 
-        if query.isdigit() and len(query) == 4:
+        import re
+        if re.match(r'^\d{3,4}[A-Z]?$', query):
             query = f"{query}.T"
 
         ticker = yf.Ticker(query)
@@ -121,17 +123,10 @@ def get_latest_prices(
 
 @app.post("/api/stocks")
 def get_stocks(query: StockQuery):
-    """複数銘柄の株価データを取得"""
-    results = []
-    errors = []
-
-    for ticker in query.tickers:
-        data = get_stock_data_yfinance(ticker, query.start, query.end, query.interval)
-        if data:
-            results.append(data)
-        else:
-            errors.append(f"{ticker}: データ取得失敗")
-
+    """複数銘柄の株価データを取得（バッチ一括ダウンロード）"""
+    results, errors = get_stock_data_batch(
+        query.tickers, query.start, query.end, query.interval
+    )
     comparison = normalize_for_comparison(results)
 
     return {
