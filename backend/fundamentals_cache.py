@@ -1,16 +1,16 @@
-"""ファンダメンタルズキャッシュ - SQLite に 24h TTL で保存"""
+"""ファンダメンタルズキャッシュ - DB に 24h TTL で保存"""
 
 from __future__ import annotations
 
 import json
 import time
-from pathlib import Path
 from typing import Optional
 
-import sqlite3
 import yfinance as yf
+from sqlalchemy import text
 
-_DB_PATH = Path(__file__).parent / "data" / "fundamentals_cache.db"
+from database import engine
+
 _TTL_SECONDS = 24 * 60 * 60
 
 _FIELDS = [
@@ -52,25 +52,24 @@ _YF_MAP = {
 }
 
 
-def _get_conn() -> sqlite3.Connection:
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS fundamentals (
-            ticker TEXT PRIMARY KEY,
-            data TEXT NOT NULL,
-            fetched_at REAL NOT NULL
-        )
-    """)
-    return conn
+def init_fundamentals_table():
+    """fundamentals テーブルが存在しなければ作成（FastAPI lifespan から呼ぶ）"""
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS fundamentals (
+                ticker VARCHAR(32) PRIMARY KEY,
+                data TEXT NOT NULL,
+                fetched_at DOUBLE PRECISION NOT NULL
+            )
+        """))
 
 
 def get_cached(ticker: str) -> Optional[dict]:
-    conn = _get_conn()
-    row = conn.execute(
-        "SELECT data, fetched_at FROM fundamentals WHERE ticker = ?", (ticker,)
-    ).fetchone()
-    conn.close()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT data, fetched_at FROM fundamentals WHERE ticker = :t"),
+            {"t": ticker},
+        ).fetchone()
     if not row:
         return None
     if time.time() - row[1] > _TTL_SECONDS:
@@ -96,13 +95,17 @@ def fetch_and_cache(ticker: str) -> Optional[dict]:
             else:
                 data[our_key] = None
 
-        conn = _get_conn()
-        conn.execute(
-            "INSERT OR REPLACE INTO fundamentals (ticker, data, fetched_at) VALUES (?, ?, ?)",
-            (ticker, json.dumps(data), time.time()),
-        )
-        conn.commit()
-        conn.close()
+        with engine.begin() as conn:
+            # PostgreSQL: ON CONFLICT, SQLite: INSERT OR REPLACE 両対応
+            conn.execute(
+                text("""
+                    INSERT INTO fundamentals (ticker, data, fetched_at)
+                    VALUES (:ticker, :data, :fetched_at)
+                    ON CONFLICT (ticker) DO UPDATE
+                    SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at
+                """),
+                {"ticker": ticker, "data": json.dumps(data), "fetched_at": time.time()},
+            )
         return data
     except Exception as e:
         print(f"[fundamentals_cache] Error fetching {ticker}: {e}")
@@ -135,10 +138,8 @@ def get_batch(tickers: list[str]) -> dict[str, dict]:
 
 
 def clear_expired():
-    conn = _get_conn()
-    conn.execute(
-        "DELETE FROM fundamentals WHERE fetched_at < ?",
-        (time.time() - _TTL_SECONDS,),
-    )
-    conn.commit()
-    conn.close()
+    with engine.begin() as conn:
+        conn.execute(
+            text("DELETE FROM fundamentals WHERE fetched_at < :cutoff"),
+            {"cutoff": time.time() - _TTL_SECONDS},
+        )

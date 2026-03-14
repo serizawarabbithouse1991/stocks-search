@@ -36,6 +36,8 @@ app.include_router(moomoo_router)
 def on_startup():
     init_db()
     _migrate_portfolio_column()
+    import fundamentals_cache
+    fundamentals_cache.init_fundamentals_table()
 
 
 def _migrate_portfolio_column():
