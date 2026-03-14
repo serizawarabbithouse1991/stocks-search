@@ -13,11 +13,14 @@ from pydantic import BaseModel
 import master
 import llm_service
 from stock_service import (
+    get_stock_data,
     get_stock_data_yfinance,
     get_stock_data_batch,
+    get_latest_price,
     get_latest_price_yfinance,
     normalize_for_comparison,
 )
+import jquants_client
 from database import init_db
 from routers.auth_router import router as auth_router
 from routers.sync_router import router as sync_router
@@ -109,6 +112,10 @@ def search_stocks(
         if re.match(r'^\d{3,4}[A-Z]?$', query):
             query = f"{query}.T"
 
+        # 日本株コードの場合は yfinance を叩かない（429対策）
+        if jquants_client.is_jp_ticker(query):
+            return {"source": "master", "results": []}
+
         ticker = yf.Ticker(query)
         info = ticker.info
         if info and info.get("symbol"):
@@ -140,7 +147,7 @@ def get_latest_prices(
         return {"prices": []}
     prices = []
     for t in ticker_list:
-        row = get_latest_price_yfinance(t)
+        row = get_latest_price(t)
         if row:
             prices.append(row)
     return {"prices": prices}
@@ -166,7 +173,7 @@ def export_csv(query: StockQuery):
     """株価データをCSVエクスポート"""
     results = []
     for ticker in query.tickers:
-        data = get_stock_data_yfinance(ticker, query.start, query.end, query.interval)
+        data = get_stock_data(ticker, query.start, query.end, query.interval)
         if data:
             results.append(data)
 
@@ -278,8 +285,13 @@ def master_reload(path: Optional[str] = None):
 # --- Fundamentals ---
 @app.get("/api/fundamentals")
 def get_fundamentals(ticker: str = Query(...)):
-    """yfinance から銘柄のファンダメンタルズ情報を取得"""
+    """銘柄のファンダメンタルズ情報を取得（日本株: J-Quants/マスタ、米国株: yfinance）"""
     try:
+        # 日本株: J-Quants + マスタデータで対応（yfinance を叩かない）
+        if jquants_client.is_jp_ticker(ticker):
+            return _get_fundamentals_jp(ticker)
+
+        # 米国株: yfinance
         t = yf.Ticker(ticker)
         info = t.info or {}
 
@@ -291,7 +303,7 @@ def get_fundamentals(ticker: str = Query(...)):
 
         return {
             "ticker": ticker,
-            "name": safe("longName") or safe("shortName") or master.resolve_name(ticker) or ticker,
+            "name": safe("longName") or safe("shortName") or ticker,
             "sector": safe("sector", ""),
             "industry": safe("industry", ""),
             "market_cap": safe("marketCap"),
@@ -318,12 +330,63 @@ def get_fundamentals(ticker: str = Query(...)):
             "fifty_two_week_low": safe("fiftyTwoWeekLow"),
             "avg_volume": safe("averageVolume"),
             "beta": safe("beta"),
-            "currency": safe("currency", "JPY"),
+            "currency": safe("currency", "USD"),
             "website": safe("website", ""),
             "summary": safe("longBusinessSummary", ""),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _get_fundamentals_jp(ticker: str) -> dict:
+    """日本株のファンダメンタルズ（J-Quants + マスタデータ）"""
+    entry = master.get_entry(ticker)
+    name = entry["name"] if entry else ticker
+    sector = entry.get("sector33", "") if entry else ""
+
+    result = {
+        "ticker": ticker,
+        "name": name,
+        "sector": sector,
+        "industry": entry.get("sector17", "") if entry else "",
+        "market_cap": None,
+        "enterprise_value": None,
+        "per": None,
+        "forward_per": None,
+        "pbr": None,
+        "eps": None,
+        "dividend_yield": None,
+        "dividend_rate": None,
+        "payout_ratio": None,
+        "roe": None,
+        "roa": None,
+        "profit_margin": None,
+        "operating_margin": None,
+        "revenue": None,
+        "net_income": None,
+        "total_debt": None,
+        "total_cash": None,
+        "book_value": None,
+        "target_mean_price": None,
+        "recommendation": "",
+        "fifty_two_week_high": None,
+        "fifty_two_week_low": None,
+        "avg_volume": None,
+        "beta": None,
+        "currency": "JPY",
+        "website": "",
+        "summary": "",
+    }
+
+    # J-Quants 財務データで補完
+    if jquants_client.is_configured():
+        fins = jquants_client.get_fins_statements(ticker)
+        if fins:
+            for key, val in fins.items():
+                if val is not None and key in result:
+                    result[key] = val
+
+    return result
 
 
 # --- LLM ---
@@ -391,7 +454,7 @@ async def llm_analyze(req: AnalysisRequest):
                 if funda.get("dividend_yield"):
                     info["dividend_yield"] = f"{round(funda['dividend_yield'] * 100, 2)}%"
 
-            latest = get_latest_price_yfinance(ticker)
+            latest = get_latest_price(ticker)
             if latest:
                 info["last_close"] = latest.get("price", "?")
                 info["change_pct"] = latest.get("change_pct", "?")

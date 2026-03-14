@@ -80,8 +80,35 @@ def get_cached(ticker: str) -> Optional[dict]:
         return None
 
 
+def _save_cache(ticker: str, data: dict):
+    """キャッシュに保存"""
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO fundamentals (ticker, data, fetched_at)
+                VALUES (:ticker, :data, :fetched_at)
+                ON CONFLICT (ticker) DO UPDATE
+                SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at
+            """),
+            {"ticker": ticker, "data": json.dumps(data), "fetched_at": time.time()},
+        )
+
+
 def fetch_and_cache(ticker: str) -> Optional[dict]:
     try:
+        import jquants_client
+
+        # 日本株: J-Quants から取得（yfinance を叩かない）
+        if jquants_client.is_jp_ticker(ticker) and jquants_client.is_configured():
+            fins = jquants_client.get_fins_statements(ticker)
+            if fins:
+                _save_cache(ticker, fins)
+                return fins
+            # J-Quants 失敗時はキーだけ None で埋めたデータを返す
+            data = {k: None for k in _FIELDS}
+            return data
+
+        # 米国株: yfinance
         t = yf.Ticker(ticker)
         info = t.info or {}
         if not info.get("symbol"):
@@ -95,17 +122,7 @@ def fetch_and_cache(ticker: str) -> Optional[dict]:
             else:
                 data[our_key] = None
 
-        with engine.begin() as conn:
-            # PostgreSQL: ON CONFLICT, SQLite: INSERT OR REPLACE 両対応
-            conn.execute(
-                text("""
-                    INSERT INTO fundamentals (ticker, data, fetched_at)
-                    VALUES (:ticker, :data, :fetched_at)
-                    ON CONFLICT (ticker) DO UPDATE
-                    SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at
-                """),
-                {"ticker": ticker, "data": json.dumps(data), "fetched_at": time.time()},
-            )
+        _save_cache(ticker, data)
         return data
     except Exception as e:
         print(f"[fundamentals_cache] Error fetching {ticker}: {e}")
