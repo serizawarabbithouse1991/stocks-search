@@ -13,12 +13,15 @@ _TIMEOUT = 30.0
 
 # トークンキャッシュ
 _refresh_token: Optional[str] = None
+_refresh_token_from_api_key: bool = False  # JQUANTS_API_KEY 由来かどうか
 _id_token: Optional[str] = None
 _id_token_expires: float = 0  # unix timestamp
 
 
 def is_configured() -> bool:
     """J-Quants の認証情報が設定されているか"""
+    if os.getenv("JQUANTS_API_KEY"):
+        return True
     return bool(os.getenv("JQUANTS_MAIL_ADDRESS") and os.getenv("JQUANTS_PASSWORD"))
 
 
@@ -36,15 +39,27 @@ def _to_jquants_code(ticker: str) -> str:
 
 
 def _get_refresh_token() -> str:
-    """mail/password から refresh_token を取得"""
-    global _refresh_token
+    """refresh_token を取得。JQUANTS_API_KEY 優先、なければ mail/password で取得"""
+    global _refresh_token, _refresh_token_from_api_key
+
     if _refresh_token:
         return _refresh_token
 
+    # 1. JQUANTS_API_KEY（= refresh_token そのもの）
+    api_key = os.getenv("JQUANTS_API_KEY", "").strip()
+    if api_key:
+        _refresh_token = api_key
+        _refresh_token_from_api_key = True
+        return _refresh_token
+
+    # 2. mail + password で取得
     mail = os.getenv("JQUANTS_MAIL_ADDRESS", "")
     password = os.getenv("JQUANTS_PASSWORD", "")
     if not mail or not password:
-        raise ValueError("JQUANTS_MAIL_ADDRESS / JQUANTS_PASSWORD が未設定です")
+        raise ValueError(
+            "J-Quants 認証情報が未設定です。"
+            "JQUANTS_API_KEY または JQUANTS_MAIL_ADDRESS + JQUANTS_PASSWORD を設定してください"
+        )
 
     resp = httpx.post(
         f"{BASE_URL}/token/auth_user",
@@ -53,6 +68,7 @@ def _get_refresh_token() -> str:
     )
     resp.raise_for_status()
     _refresh_token = resp.json()["refreshToken"]
+    _refresh_token_from_api_key = False
     return _refresh_token
 
 
@@ -69,8 +85,18 @@ def _get_id_token() -> str:
         timeout=_TIMEOUT,
     )
     if resp.status_code == 401:
-        # refresh_token 期限切れ → 再取得
-        global _refresh_token
+        global _refresh_token, _refresh_token_from_api_key
+        if _refresh_token_from_api_key:
+            # JQUANTS_API_KEY 由来 → 自動再取得不可
+            print(
+                "[jquants] ERROR: JQUANTS_API_KEY (refresh_token) が期限切れです（有効期限: 1週間）。"
+                "J-Quants マイページで新しい refresh_token を取得し、環境変数を更新してください。"
+            )
+            raise ValueError(
+                "JQUANTS_API_KEY (refresh_token) が期限切れです。"
+                "J-Quants マイページで再発行してください。"
+            )
+        # mail/password 由来 → 再取得を試行
         _refresh_token = None
         refresh = _get_refresh_token()
         resp = httpx.post(
