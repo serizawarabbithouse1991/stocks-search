@@ -9,7 +9,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "StocksView",
     "windows": [
       {
         "title": "StocksView",
@@ -31,20 +30,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "externalBin": [
-      "binaries/backend"
     ]
   },
   "plugins": {
     "shell": {
-      "sidecar": true,
-      "scope": [
-        {
-          "name": "binaries/backend",
-          "sidecar": true
-        }
-      ]
+      "open": true
     }
   }
 }
